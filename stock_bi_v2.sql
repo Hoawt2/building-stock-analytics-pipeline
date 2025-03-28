@@ -16,14 +16,14 @@ SET foreign_key_checks = 1;
 
 -- Tạo bảng dimension
 CREATE TABLE dim_index (
-    index_id INT PRIMARY KEY AUTO_INCREMENT,
+    index_id INT PRIMARY KEY,
     index_name VARCHAR(255) NOT NULL,
     ticker VARCHAR(10) UNIQUE,
     calculation_method VARCHAR(255)
 );
 
 CREATE TABLE dim_stock (
-    stock_id INT PRIMARY KEY AUTO_INCREMENT,
+    stock_id INT PRIMARY KEY ,
     ticker VARCHAR(10) UNIQUE,
     company_name VARCHAR(255) NOT NULL,
     sector VARCHAR(50),
