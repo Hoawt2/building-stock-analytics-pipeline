@@ -89,7 +89,7 @@ CREATE TABLE fact_index_history (
     open_value DECIMAL(10,2) NOT NULL,
     low_value DECIMAL(10,2),
     high_value DECIMAL(10,2),
-    last_value DECIMAL(10,2) NOT NULL,
+    `last_value` DECIMAL(10,2) NOT NULL,
     daily_return DECIMAL(10,4),
     market_volatility DECIMAL(10,4),
     FOREIGN KEY (index_id) REFERENCES dim_index(index_id),
