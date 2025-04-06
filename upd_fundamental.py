@@ -2,7 +2,6 @@ from db_connect import connect_db  # Import connect_db từ file db_connect.py
 from utils_fundamental import get_all_tickers, parse_quarterly_data, check_and_insert_dim_time
 from datetime import datetime
 
-# Mốc thời gian bắt đầu và kết thúc
 START_DATE = datetime(2020, 1, 1)
 CURRENT_DATE = datetime.now()
 
@@ -14,14 +13,14 @@ def close_db_connection(cursor, conn):
         conn.close()
 
 def update_fundamental_for_all_stocks():
-    tickers = get_all_tickers()  # Lấy tất cả các mã cổ phiếu
+    tickers = get_all_tickers()
     
     for ticker in tickers:
         print(f"➡️ Đang lấy dữ liệu fundamental cho {ticker}")
-        quarter_data = parse_quarterly_data(ticker, START_DATE, CURRENT_DATE)  # Lấy dữ liệu theo quý
+        quarter_data = parse_quarterly_data(ticker, START_DATE, CURRENT_DATE)
         
         if quarter_data:
-            update_fact_fundamental_batch(quarter_data)  # Cập nhật dữ liệu vào cơ sở dữ liệu
+            update_fact_fundamental_batch(quarter_data)
             print(f"✅ Đã cập nhật dữ liệu fundamental cho {ticker}")
         else:
             print(f"⚠️ Không có dữ liệu fundamental cho {ticker}")
@@ -48,7 +47,7 @@ def update_fact_fundamental_batch(quarter_data):
         stock_id = item['stock_id']
         time_id = item['time_id']
 
-        # Check time_id & stock_idid
+        # Check time_id & stock_id
         cursor.execute("""
             SELECT 1 FROM fact_company_financials_quarterly 
             WHERE stock_id = %s AND time_id = %s

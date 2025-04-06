@@ -1,17 +1,15 @@
 import requests
-from db_connect import connect_db  # Import connect_db từ file db_connect.py
+from db_connect import connect_db
 from config import API_KEY_APV
 from datetime import datetime
 
 def get_db_connection():
-    """Lấy kết nối cơ sở dữ liệu từ connect_db"""
     conn = connect_db()
     if not conn:
         print("❌ Không thể kết nối cơ sở dữ liệu trong get_db_connection")
     return conn
 
 def close_db_connection(cursor, conn):
-    """Đóng con trỏ và kết nối cơ sở dữ liệu"""
     if cursor:
         cursor.close()
     if conn and conn.is_connected():
@@ -117,7 +115,6 @@ def parse_quarterly_data(ticker, start_date, end_date):
     
     quarter_data = []
     
-    # Khởi tạo kết nối DB để dùng chung
     conn = get_db_connection()
     if not conn:
         return []
@@ -176,7 +173,6 @@ def parse_quarterly_data(ticker, start_date, end_date):
             }
             quarter_data.append(item)
     
-    # Đóng kết nối DB
     close_db_connection(cursor, conn)
 
     print(f"[PARSE] Parsed {len(quarter_data)} quarters for {ticker}")

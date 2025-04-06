@@ -39,7 +39,6 @@ def insert_index_data(csv_file):
         cursor.close()
         conn.close()
 
-# Thêm main() để có thể gọi từ main.py
 def main():
     insert_index_data("index_list.csv")
 

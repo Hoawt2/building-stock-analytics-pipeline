@@ -13,7 +13,6 @@ def update_stock_history_for_all_stocks():
     for ticker in tickers:
         print(f"Đang cập nhật dữ liệu lịch sử từ 01/01/2020 đến hôm nay cho: {ticker}")
         
-        # Lấy dữ liệu thiếu từ lịch sử của các mã cổ phiếu
         missing_data = fetch_missing_data_for_dates(ticker, start_date, end_date, existing_time_ids)
         
         if missing_data:

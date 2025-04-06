@@ -15,10 +15,9 @@ if __name__ == "__main__":
 
     update_index_history_for_all_indices()
 
-    # Nên chạy 1 lần duy nhất thôi
-    # update_fundamental_for_all_stocks()
-
+    # 2 hàm này nên chạy 1 lần duy nhất thôi
+    update_fundamental_for_all_stocks()
     update_financial_ratios()
 
-    # Cập nhật dữ liệu ngày hôm qua (chạy hàng ngày)
+    # Cập nhật dữ liệu ngày hôm qua (chạy hàng ngày) chưa cần dùng lắmlắm
     # update_yesterday()
