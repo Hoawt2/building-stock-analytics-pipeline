@@ -14,7 +14,6 @@ def insert_index_data(csv_file):
 
     try:
         cursor = conn.cursor()
-
         cursor.execute("SELECT COALESCE(MAX(index_id), 0) FROM dim_index;")
         max_id = cursor.fetchone()[0]
 
@@ -40,4 +39,9 @@ def insert_index_data(csv_file):
         cursor.close()
         conn.close()
 
-insert_index_data("index_list.csv")
+# Thêm main() để có thể gọi từ main.py
+def main():
+    insert_index_data("index_list.csv")
+
+if __name__ == "__main__":
+    main()

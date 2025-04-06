@@ -16,7 +16,6 @@ def insert_stock_data(csv_file):
 
     try:
         cursor = conn.cursor()
-
         cursor.execute("SELECT COALESCE(MAX(stock_id), 0) FROM dim_stock;")
         max_id = cursor.fetchone()[0]
 
@@ -56,4 +55,9 @@ def insert_stock_data(csv_file):
         cursor.close()
         conn.close()
 
-insert_stock_data("stock_list.csv")
+# Thêm main() để có thể gọi từ main.py
+def main():
+    insert_stock_data("stock_list.csv")
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,26 @@
+├── dim_index                    # Insert dữ liệu vào bảng dim_index
+├── dim_stock                    # Insert dữ liệu vào bảng dim_stock
+├── index_list.csv               # File chứa danh sách các chỉ số chứng khoán
+├── stock_list.csv               # File chứa danh sách các cổ phiếu
+├── db_connect.py                # Kết nối cơ sở dữ liệu MySQL
+├── update_sto_5y.py             # Cập nhật dữ liệu lịch sử cổ phiếu trong 5 năm
+├── update_idx_5y.py             # Cập nhật dữ liệu lịch sử các chỉ số trong 5 năm
+├── upd_sto_yesterday.py         # Cập nhật dữ liệu ngày hôm qua (Chưa dùng tới)
+├── upd_financial_ratios.py      # Cập nhật dữ liệu ratios 
+├── upd_fundamental.py           # Cập nhật các chỉ số quan trọng của balance sheet, income statement, cash flow theo quýquý
+├── utils_fundamental.py         # Các hàm xử lý API
+├── utils_index.py               # Các hàm xử lý thư viện yfinancial
+├── utils_ratio_quarter.py       # Các hàm xử lý API
+├── config.py                    # Các cấu hình cơ sở dữ liệu và các API key 
+└── run_all.py                   # Entry point để chạy các hàm
+├── README.md                    # Hướng dẫn sử dụng
+├── .gitignore                   # Các file không cần thiết không đưa vào git
+├── .env                         # Các biến môi trường
+├── .gitlab-ci.yml               # File cấu hình CI/CD trên GitLab
+├── .github/workflows/ci.yml     # File cấu hình CI/CD trên GitHub
+
+mysql-connector-python
+yfinance
+pandas
+API Financial Modeling Prep
+API Alpha Vantage

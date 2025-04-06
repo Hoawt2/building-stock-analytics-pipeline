@@ -1,11 +1,5 @@
 import mysql.connector
-
-DB_CONFIG = {
-    "host": "localhost",
-    "user": "root",
-    "password": "hoang504901",
-    "database": "stock_bi"
-}
+from config import DB_CONFIG
 
 def connect_db():
     try:
