@@ -136,15 +136,12 @@ CREATE TABLE fact_financial_ratios (
     stock_id INT NOT NULL,
     time_id INT NOT NULL,
     current_ratio DECIMAL(10,2),
-    quick_ratio DECIMAL(10,2),
-    roa DECIMAL(10,2),
     roe DECIMAL(10,2),
     debt_to_equity DECIMAL(10,2),
     pe_ratio DECIMAL(10,2),
     pb_ratio DECIMAL(10,2),
     dividend_yield DECIMAL(10,2),
     interest_coverage_ratio DECIMAL(10,2),
-    ebitda_margin DECIMAL(10,2),
     FOREIGN KEY (stock_id) REFERENCES dim_stock(stock_id),
     FOREIGN KEY (time_id) REFERENCES dim_time(date_key)
 );
