@@ -1,4 +1,4 @@
-from db_connect import connect_db  # Import connect_db từ file db_connect.py
+from db_connect import connect_db
 from utils_fundamental import get_all_tickers, parse_quarterly_data, check_and_insert_dim_time
 from datetime import datetime
 
@@ -47,7 +47,6 @@ def update_fact_fundamental_batch(quarter_data):
         stock_id = item['stock_id']
         time_id = item['time_id']
 
-        # Check time_id & stock_id
         cursor.execute("""
             SELECT 1 FROM fact_company_financials_quarterly 
             WHERE stock_id = %s AND time_id = %s
@@ -56,9 +55,8 @@ def update_fact_fundamental_batch(quarter_data):
 
         if exists:
             print(f"⚠️ Dữ liệu đã tồn tại cho stock_id={stock_id}, time_id={time_id} ➔ Bỏ qua.")
-            continue  # Skip insert nếu đã có
+            continue
 
-        # Nếu chưa có thì insert
         cursor.execute(insert_query, (
             stock_id,
             time_id,

@@ -71,14 +71,12 @@ def check_and_insert_dim_time(time_id, conn=None, cursor=None):
         cursor = conn.cursor()
         close_conn = True
     
-    # Kiểm tra time_id đã tồn tại trong dim_time chưa
     try:
         cursor.execute("SELECT 1 FROM dim_time WHERE date_key = %s", (time_id,))
         result = cursor.fetchone()
         
         if not result:
             print(f"[DIM_TIME] time_id {time_id} không tồn tại trong dim_time")
-            # Vì bảng dim_time đã đầy đủ từ 2020 đến 2025, không cần chèn thêm
             if close_conn:
                 close_db_connection(cursor, conn)
             return False
@@ -93,7 +91,6 @@ def check_and_insert_dim_time(time_id, conn=None, cursor=None):
     return True
 
 def parse_quarterly_data(ticker, start_date, end_date):
-    # Lấy dữ liệu từ các API
     income_data = fetch_alpha_vantage_data(ticker, "INCOME_STATEMENT")
     balance_data = fetch_alpha_vantage_data(ticker, "BALANCE_SHEET")
     cashflow_data = fetch_alpha_vantage_data(ticker, "CASH_FLOW")
@@ -102,7 +99,6 @@ def parse_quarterly_data(ticker, start_date, end_date):
     if not (income_data and balance_data and cashflow_data and earnings_data):
         return []
 
-    # Lấy quarterly reports
     income_quarters = income_data.get("quarterlyReports", [])
     balance_quarters = balance_data.get("quarterlyReports", [])
     cashflow_quarters = cashflow_data.get("quarterlyReports", [])
@@ -120,7 +116,6 @@ def parse_quarterly_data(ticker, start_date, end_date):
         return []
     cursor = conn.cursor()
 
-    # Gộp theo quý
     for i in range(min(len(income_quarters), len(balance_quarters), len(cashflow_quarters), len(earnings_quarters))):
         income = income_quarters[i]
         balance = balance_quarters[i]

@@ -8,7 +8,7 @@ def update_stock_history_for_all_stocks():
     existing_time_ids = get_existing_time_ids()
     
     start_date = '2020-01-01'
-    end_date = datetime.now().strftime('%Y-%m-%d')  # Ngày hiện tại
+    end_date = datetime.now().strftime('%Y-%m-%d')
 
     for ticker in tickers:
         print(f"Đang cập nhật dữ liệu lịch sử từ 01/01/2020 đến hôm nay cho: {ticker}")

@@ -6,12 +6,12 @@
 ├── update_sto_5y.py             # Cập nhật dữ liệu lịch sử cổ phiếu trong 5 năm
 ├── update_idx_5y.py             # Cập nhật dữ liệu lịch sử các chỉ số trong 5 năm
 ├── upd_sto_yesterday.py         # Cập nhật dữ liệu ngày hôm qua (Chưa dùng tới)
-├── upd_financial_ratios.py      # Cập nhật dữ liệu ratios 
-├── upd_fundamental.py           # Cập nhật các chỉ số quan trọng của balance sheet, income statement, cash flow theo quýquý
+├── upd_financial_ratios.py      # Cập nhật dữ liệu ratios
+├── upd_fundamental.py           # Cập nhật các chỉ số quan trọng của balance sheet, income statement, cash flow theo quý
 ├── utils_fundamental.py         # Các hàm xử lý API
 ├── utils_index.py               # Các hàm xử lý thư viện yfinancial
 ├── utils_ratio_quarter.py       # Các hàm xử lý API
-├── config.py                    # Các cấu hình cơ sở dữ liệu và các API key 
+├── config.py                    # Các cấu hình cơ sở dữ liệu và các API key
 └── run_all.py                   # Entry point để chạy các hàm
 ├── README.md                    # Hướng dẫn sử dụng
 ├── .gitignore                   # Các file không cần thiết không đưa vào git

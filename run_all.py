@@ -19,5 +19,5 @@ if __name__ == "__main__":
     update_fundamental_for_all_stocks()
     update_financial_ratios()
 
-    # Cập nhật dữ liệu ngày hôm qua (chạy hàng ngày) chưa cần dùng lắmlắm
+    # Cập nhật dữ liệu ngày hôm qua (chạy hàng ngày) chưa cần dùng lắm
     # update_yesterday()
