@@ -18,8 +18,7 @@ SET foreign_key_checks = 1;
 CREATE TABLE dim_index (
     index_id INT PRIMARY KEY,
     index_name VARCHAR(255) NOT NULL,
-    ticker VARCHAR(10) UNIQUE,
-    calculation_method VARCHAR(255)
+    ticker VARCHAR(10) UNIQUE
 );
 
 CREATE TABLE dim_stock (
