@@ -1,33 +1,20 @@
-├── dim_index                    # Insert dữ liệu vào bảng dim_index
-├── dim_stock                    # Insert dữ liệu vào bảng dim_stock
-├── index_list.csv               # File chứa danh sách các chỉ số chứng khoán
-├── stock_list.csv               # File chứa danh sách các cổ phiếu
-├── db_connect.py                # Kết nối cơ sở dữ liệu MySQL
-├── update_sto_5y.py             # Cập nhật dữ liệu lịch sử cổ phiếu trong 5 năm
-├── update_idx_5y.py             # Cập nhật dữ liệu lịch sử các chỉ số trong 5 năm
-├── upd_sto_yesterday.py         # Cập nhật dữ liệu ngày hôm qua (Chưa dùng tới)
-├── upd_financial_ratios.py      # Cập nhật dữ liệu ratios
-├── upd_fundamental.py           # Cập nhật các chỉ số quan trọng của balance sheet, income statement, cash flow theo quý
-├── utils_fundamental.py         # Các hàm xử lý API
-├── utils_index.py               # Các hàm xử lý thư viện yfinancial
-├── utils_ratio_quarter.py       # Các hàm xử lý API
-├── config.py                    # Các cấu hình cơ sở dữ liệu và các API key
-└── run_all.py                   # Entry point để chạy các hàm
-├── README.md                    # Hướng dẫn sử dụng
-├── .gitignore                   # Các file không cần thiết không đưa vào git
-├── .env                         # Các biến môi trường
-├── .gitlab-ci.yml               # File cấu hình CI/CD trên GitLab
-├── .github/workflows/ci.yml     # File cấu hình CI/CD trên GitHub
-
-mysql-connector-python
-yfinance
-pandas
-API Financial Modeling Prep
-API Alpha Vantage
-
-# Đọc kỹ run_all
-# Thay database để kẻo sai
-# Đọc file config.py để thay đổi các thông số kết nối cơ sở dữ liệu và API key
-# Chưa có các thư viện mysql-connector-python, yfinance, pandas thì pip install
-# Vào trang chủ của Alpha Vantage, Financial Modeling Prep để lấy API key
-# Alpha Vantage có giới hạn số lần gọi API trong 1 ngày với 25 request nên dùng cẩn thận
+beautifulsoup4==4.13.4
+certifi==2025.1.31
+charset-normalizer==3.4.1
+frozendict==2.4.6
+idna==3.10
+multitasking==0.0.11
+mysql-connector-python==9.3.0
+numpy==2.2.4
+pandas==2.2.3
+peewee==3.17.9
+platformdirs==4.3.7
+python-dateutil==2.9.0.post0
+pytz==2025.2
+requests==2.32.3
+six==1.17.0
+soupsieve==2.6
+typing_extensions==4.13.2
+tzdata==2025.2
+urllib3==2.4.0
+yfinance==0.2.55

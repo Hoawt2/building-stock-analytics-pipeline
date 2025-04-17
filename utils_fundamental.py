@@ -53,12 +53,10 @@ def fetch_alpha_vantage_data(ticker, function):
         "apikey": API_KEY_APV
     }
     response = requests.get(url, params=params)
-    print(f"[API] Fetching {function} for {ticker}: Status {response.status_code}")
     
     if response.status_code == 200:
         return response.json()
     else:
-        print(f"[ERROR] Failed to fetch {function} for {ticker}")
         return None
 
 def check_and_insert_dim_time(time_id, conn=None, cursor=None):
@@ -76,7 +74,6 @@ def check_and_insert_dim_time(time_id, conn=None, cursor=None):
         result = cursor.fetchone()
         
         if not result:
-            print(f"[DIM_TIME] time_id {time_id} không tồn tại trong dim_time")
             if close_conn:
                 close_db_connection(cursor, conn)
             return False
@@ -106,7 +103,6 @@ def parse_quarterly_data(ticker, start_date, end_date):
 
     stock_id = get_stock_id_by_ticker(ticker)
     if stock_id is None:
-        print(f"⚠️ Không tìm thấy stock_id cho {ticker}")
         return []
     
     quarter_data = []
@@ -129,7 +125,6 @@ def parse_quarterly_data(ticker, start_date, end_date):
         try:
             fiscal_date_obj = datetime.strptime(fiscal_date_ending, "%Y-%m-%d")
         except ValueError:
-            print(f"[ERROR] Định dạng ngày không hợp lệ cho {ticker}: {fiscal_date_ending}")
             continue
         
         # Kiểm tra nếu fiscal_date_ending nằm trong khoảng từ start_date đến end_date
@@ -170,5 +165,4 @@ def parse_quarterly_data(ticker, start_date, end_date):
     
     close_db_connection(cursor, conn)
 
-    print(f"[PARSE] Parsed {len(quarter_data)} quarters for {ticker}")
     return quarter_data
