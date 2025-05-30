@@ -1,6 +1,7 @@
 import pandas as pd
 import yfinance as yf
 import requests
+import logging
 from db_connect import connect_db
 from datetime import datetime, timedelta
 from config import API_KEY_FMP
@@ -46,13 +47,16 @@ def get_market_cap_for_ticker(ticker, start_date, end_date):
         "to": end_date,
         "apikey": API_KEY_FMP
     }
-    response = requests.get(url, params=params)
-    
-    if response.status_code == 200:
+
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
         data = response.json()
-        if len(data) > 0:
-            return {item['date']: item['marketCap'] for item in data}
-    return {}
+        return {item['date']: item['marketCap'] for item in data} if data else {}
+    except requests.RequestException as e:
+        logging.warning(f"⚠️ Không thể lấy market cap {ticker} từ {start_date} → {end_date}: {e}")
+        return {}
+
 
 def fetch_market_cap_by_year(ticker, start_date, end_date):
     start = datetime.strptime(start_date, '%Y-%m-%d')
@@ -73,44 +77,39 @@ def fetch_market_cap_by_year(ticker, start_date, end_date):
     return market_cap_dict
 
 def fetch_missing_data_for_dates(ticker, start_date, end_date, existing_time_ids):
-    if start_date not in ["yesterday", "5 years ago"]:
-        start_date_str = start_date
-    else:
-        start_date_str = get_date_str_from_relative_date(start_date)
-
-    if end_date not in ["yesterday", "5 years ago"]:
-        end_date_str = end_date
-    else:
-        end_date_str = get_date_str_from_relative_date(end_date)
+    start_date_str = get_date_str_from_relative_date(start_date) if start_date in ["yesterday", "5 years ago"] else start_date
+    end_date_str = get_date_str_from_relative_date(end_date) if end_date in ["yesterday", "5 years ago"] else end_date
 
     stock = yf.Ticker(ticker)
     historical_data = stock.history(start=start_date_str, end=end_date_str)
 
     market_cap_dict = fetch_market_cap_by_year(ticker, start_date_str, end_date_str)
+    stock_id = get_stock_id_by_ticker(ticker)
 
     missing_data = []
     for index, row in historical_data.iterrows():
         time_id = int(row.name.strftime('%Y%m%d'))
         date_str = row.name.strftime('%Y-%m-%d')
 
-        if time_id not in existing_time_ids:
+        if time_id in existing_time_ids:
+            continue
 
-            if date_str not in market_cap_dict:
-                pass
+        market_cap = market_cap_dict.get(date_str, None)
 
-            missing_data.append({
-                "stock_id": get_stock_id_by_ticker(ticker),
-                "time_id": time_id,
-                "open_price": row['Open'],
-                "high_price": row['High'],
-                "low_price": row['Low'],
-                "last_price": row['Close'],
-                "close_price": row['Close'],
-                "volume": row['Volume'],
-                "market_cap": market_cap_dict.get(date_str)
-            })
+        missing_data.append({
+            "stock_id": stock_id,
+            "time_id": time_id,
+            "open_price": row['Open'],
+            "high_price": row['High'],
+            "low_price": row['Low'],
+            "last_price": row['Close'],
+            "close_price": row['Close'],
+            "volume": row['Volume'],
+            "market_cap": market_cap
+        })
 
     return missing_data
+
 
 def get_stock_id_by_ticker(ticker):
     conn = get_db_connection()

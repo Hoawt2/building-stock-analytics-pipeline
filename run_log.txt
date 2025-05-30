@@ -1,0 +1,127 @@
+==== Building Docker containers... ==== 
+time="2025-05-25T09:49:01+07:00" level=warning msg="E:\\ProjectBI-\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [etl internal] load build definition from Dockerfile
+#1 transferring dockerfile: 478B 0.0s done
+#1 DONE 0.0s
+
+#2 [etl internal] load metadata for docker.io/library/python:3.10-slim
+#2 ...
+
+#3 [etl auth] library/python:pull token for registry-1.docker.io
+#3 DONE 0.0s
+
+#2 [etl internal] load metadata for docker.io/library/python:3.10-slim
+#2 DONE 2.3s
+
+#4 [etl internal] load .dockerignore
+#4 transferring context: 291B done
+#4 DONE 0.0s
+
+#5 [etl 1/5] FROM docker.io/library/python:3.10-slim@sha256:49454d2bf78a48f217eb25ecbcb4b5face313fea6a6e82706465a6990303ada2
+#5 DONE 0.0s
+
+#6 [etl internal] load build context
+#6 transferring context: 1.57kB 0.0s done
+#6 DONE 0.0s
+
+#7 [etl 2/5] WORKDIR /etl
+#7 CACHED
+
+#8 [etl 3/5] COPY requirements.txt .
+#8 CACHED
+
+#9 [etl 4/5] RUN pip install --no-cache-dir -r requirements.txt
+#9 CACHED
+
+#10 [etl 5/5] COPY . .
+#10 DONE 0.1s
+
+#11 [etl] exporting to image
+#11 exporting layers 0.0s done
+#11 writing image sha256:9d212b0e148392889571af51cfe16328e9918d9774883f0cecce7c4759c5e911 done
+#11 naming to docker.io/library/projectbi--etl done
+#11 DONE 0.1s
+
+#12 [etl] resolving provenance for metadata file
+#12 DONE 0.0s
+ etl  Built
+==== Starting Docker containers... ==== 
+time="2025-05-25T09:49:04+07:00" level=warning msg="E:\\ProjectBI-\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container projectbi-db  Running
+ Container projectbi-etl  Recreate
+ Container projectbi-etl  Recreated
+ Container projectbi-db  Waiting
+ Container projectbi-db  Healthy
+ Container projectbi-etl  Starting
+ Container projectbi-etl  Started
+==== DONE at Sun 05/25/2025  9:49:12.11 ==== 
+==== Building Docker containers... ==== 
+time="2025-05-27T09:49:02+07:00" level=warning msg="E:\\ProjectBI-\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [etl internal] load build definition from Dockerfile
+#1 transferring dockerfile: 478B 0.0s done
+#1 DONE 0.0s
+
+#2 [etl internal] load metadata for docker.io/library/python:3.10-slim
+#2 ...
+
+#3 [etl auth] library/python:pull token for registry-1.docker.io
+#3 DONE 0.0s
+
+#2 [etl internal] load metadata for docker.io/library/python:3.10-slim
+#2 DONE 2.7s
+
+#4 [etl internal] load .dockerignore
+#4 transferring context: 291B done
+#4 DONE 0.0s
+
+#5 [etl 1/5] FROM docker.io/library/python:3.10-slim@sha256:49454d2bf78a48f217eb25ecbcb4b5face313fea6a6e82706465a6990303ada2
+#5 DONE 0.0s
+
+#6 [etl internal] load build context
+#6 transferring context: 3.56kB 0.0s done
+#6 DONE 0.0s
+
+#7 [etl 2/5] WORKDIR /etl
+#7 CACHED
+
+#8 [etl 3/5] COPY requirements.txt .
+#8 CACHED
+
+#9 [etl 4/5] RUN pip install --no-cache-dir -r requirements.txt
+#9 CACHED
+
+#10 [etl 5/5] COPY . .
+#10 DONE 0.1s
+
+#11 [etl] exporting to image
+#11 exporting layers 0.1s done
+#11 writing image sha256:2900f4aad77fd6e3c4bc95b92877d8627a15e2552a7d9c60e484872a3e1e524b done
+#11 naming to docker.io/library/projectbi--etl 0.0s done
+#11 DONE 0.1s
+
+#12 [etl] resolving provenance for metadata file
+#12 DONE 0.0s
+ etl  Built
+==== Starting Docker containers... ==== 
+time="2025-05-27T09:49:06+07:00" level=warning msg="E:\\ProjectBI-\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container projectbi-db  Created
+ Container projectbi-etl  Recreate
+ Container projectbi-etl  Recreated
+ Container projectbi-db  Starting
+ Container projectbi-db  Started
+ Container projectbi-db  Waiting
+ Container projectbi-db  Healthy
+ Container projectbi-etl  Starting
+ Container projectbi-etl  Started
+==== DONE at Tue 05/27/2025  9:49:14.79 ==== 
+==== Fri 05/30/2025  9:49:01.75 - Building Docker containers... ==== 
+time="2025-05-30T09:49:02+07:00" level=warning msg="E:\\ProjectBI-\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+error during connect: Head "http://%2F%2F.%2Fpipe%2FdockerDesktopLinuxEngine/_ping": open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.
+==== Fri 05/30/2025  9:49:02.67 - Starting Docker containers... ==== 
+time="2025-05-30T09:49:02+07:00" level=warning msg="E:\\ProjectBI-\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+unable to get image 'projectbi--etl': error during connect: Get "http://%2F%2F.%2Fpipe%2FdockerDesktopLinuxEngine/v1.47/images/projectbi--etl/json": open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.
+==== DONE at Fri 05/30/2025  9:49:02.91 ==== 

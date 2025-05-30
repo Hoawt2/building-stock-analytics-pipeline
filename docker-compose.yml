@@ -32,6 +32,7 @@ services:
       DB_NAME: stock_bi
       API_KEY_FMP: TPTxrDMbZB96m9QtFClX8kGTsgub1WM3
       API_KEY_APV: 25L8UJNSALAN1R7G
+      START_DATE: "2025-01-01"
     volumes:
       - .:/etl
     command: python run_all.py
