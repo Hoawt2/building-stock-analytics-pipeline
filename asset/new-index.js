@@ -1,0 +1,347 @@
+const socket = io();
+let isConnected = false;
+let stockData = [];
+let etfData = [];
+
+// Connection status handling
+socket.on('connect', function () {
+    console.log('[INFO] Connected to server');
+    isConnected = true;
+    updateStatus('Đã kết nối - Đang chờ dữ liệu...', 'connected');
+    
+    // Request initial data when connected
+    console.log('[INFO] Requesting initial stock data...');
+});
+
+socket.on('disconnect', function () {
+    console.log('[INFO] Disconnected from server');
+    isConnected = false;
+    updateStatus('Mất kết nối - Đang thử kết nối lại...', 'disconnected');
+});
+
+function updateStatus(message, className) {
+    const statusDiv = document.getElementById('status');
+    if (statusDiv) {
+        statusDiv.textContent = message;
+        statusDiv.className = `status ${className}`;
+    }
+}
+
+// Stock data handling
+socket.on("stock_data", function (data) {
+    console.log("[DEBUG] Received stock data:", data);
+    
+    // Validate data structure
+    if (!Array.isArray(data)) {
+        console.error('[ERROR] Invalid stock data format:', data);
+        return;
+    }
+    
+    stockData = data;
+    updateStockTable(data, 'stock');
+    updateConnectionStatus();
+});
+
+// ETF data handling
+socket.on("etf_data", function (data) {
+    console.log("[DEBUG] Received ETF data:", data);
+    
+    // Validate data structure
+    if (!Array.isArray(data)) {
+        console.error('[ERROR] Invalid ETF data format:', data);
+        return;
+    }
+    
+    etfData = data;
+    updateETFTable(data);
+    // Update ETF index-cards in Home section
+    data.forEach(etf => {
+        const card = document.getElementById(`etf-${etf.symbol}`);
+        if (!card) return;
+
+        const valueDiv = card.querySelector(".index-value");
+        const changeDiv = card.querySelector(".index-change");
+
+        if (valueDiv && !isNaN(parseFloat(etf.price))) {
+            valueDiv.textContent = parseFloat(etf.price).toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            });
+        }
+
+        if (changeDiv && !isNaN(parseFloat(etf.change))) {
+            const change = parseFloat(etf.change);
+            changeDiv.textContent = `${change >= 0 ? "↗ +" : "↘ "}${change.toFixed(2)}%`;
+            changeDiv.className = "index-change " + (change > 0 ? "positive" : change < 0 ? "negative" : "neutral");
+        }
+    });
+
+    updateConnectionStatus();
+});
+
+function updateStockTable(data, dataType = 'stock') {
+    const tbody = document.querySelector("#stockTable tbody");
+    const loadingDiv = document.getElementById("loading");
+    const stockTable = document.getElementById("stockTable");
+
+    if (!tbody || !loadingDiv || !stockTable) {
+        console.error('[ERROR] Required DOM elements not found');
+        return;
+    }
+
+    // Hide loading and show table
+    loadingDiv.style.display = "none";
+    stockTable.style.display = "table";
+
+    // Clear old rows
+    tbody.innerHTML = "";
+
+    // Check if data is valid
+    if (!Array.isArray(data) || data.length === 0) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = 3;
+        cell.textContent = "Không có dữ liệu";
+        cell.style.textAlign = "center";
+        cell.style.color = "#666";
+        row.appendChild(cell);
+        tbody.appendChild(row);
+        return;
+    }
+
+    data.forEach(stock => {
+        // Validate individual stock data
+        if (!stock || typeof stock !== 'object') {
+            console.warn('[WARNING] Invalid stock object:', stock);
+            return;
+        }
+
+        const row = document.createElement("tr");
+
+        // Symbol cell
+        const symbolCell = document.createElement("td");
+        symbolCell.className = "symbol-cell";
+        symbolCell.textContent = stock.symbol || "N/A";
+
+        // Price cell with proper formatting
+        const priceCell = document.createElement("td");
+        priceCell.className = "price-cell";
+
+        let numericPrice = parseFloat(stock.price);
+        if (isNaN(numericPrice) || numericPrice === null || numericPrice === undefined) {
+            priceCell.textContent = "N/A";
+        } else {
+            // Format price with comma separator and 2 decimal places
+            const formattedPrice = numericPrice.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            priceCell.textContent = `US$ ${formattedPrice}`;
+        }
+
+        // Change cell
+        const changeCell = document.createElement("td");
+        let numericChange = parseFloat(stock.change);
+
+        if (isNaN(numericChange) || numericChange === null || numericChange === undefined) {
+            changeCell.textContent = "N/A";
+            changeCell.className = "neutral";
+        } else {
+            changeCell.textContent = numericChange.toFixed(2) + "%";
+
+            if (numericChange > 0) {
+                changeCell.className = "up";
+                changeCell.textContent = "+" + changeCell.textContent;
+            } else if (numericChange < 0) {
+                changeCell.className = "down";
+            } else {
+                changeCell.className = "neutral";
+            }
+        }
+
+        // Add cells to row
+        row.appendChild(symbolCell);
+        row.appendChild(priceCell);
+        row.appendChild(changeCell);
+        tbody.appendChild(row);
+    });
+}
+
+function updateETFTable(data) {
+    const tbody = document.querySelector("#etfTable tbody");
+    const etfTable = document.getElementById("etfTable");
+
+    if (!tbody || !etfTable) {
+        console.error('[ERROR] ETF table elements not found');
+        return;
+    }
+
+    // Show ETF table
+    etfTable.style.display = "table";
+
+    // Clear old rows
+    tbody.innerHTML = "";
+
+    // Check if data is valid
+    if (!Array.isArray(data) || data.length === 0) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = 3;
+        cell.textContent = "Không có dữ liệu ETF";
+        cell.style.textAlign = "center";
+        cell.style.color = "#666";
+        row.appendChild(cell);
+        tbody.appendChild(row);
+        return;
+    }
+
+    data.forEach(etf => {
+        // Validate individual ETF data
+        if (!etf || typeof etf !== 'object') {
+            console.warn('[WARNING] Invalid ETF object:', etf);
+            return;
+        }
+
+        const row = document.createElement("tr");
+
+        // Name cell (for ETFs, we show the full name)
+        const nameCell = document.createElement("td");
+        nameCell.className = "symbol-cell";
+        nameCell.innerHTML = `
+            <div>
+                <strong>${etf.name || "N/A"}</strong><br>
+                <small style="color: #666;">${etf.symbol || "N/A"}</small>
+            </div>
+        `;
+
+        // Price cell
+        const priceCell = document.createElement("td");
+        priceCell.className = "price-cell";
+
+        let numericPrice = parseFloat(etf.price);
+        if (isNaN(numericPrice) || numericPrice === null || numericPrice === undefined) {
+            priceCell.textContent = "N/A";
+        } else {
+            const formattedPrice = numericPrice.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            priceCell.textContent = `US$ ${formattedPrice}`;
+        }
+
+        // Change cell
+        const changeCell = document.createElement("td");
+        let numericChange = parseFloat(etf.change);
+
+        if (isNaN(numericChange) || numericChange === null || numericChange === undefined) {
+            changeCell.textContent = "N/A";
+            changeCell.className = "neutral";
+        } else {
+            changeCell.textContent = numericChange.toFixed(2) + "%";
+
+            if (numericChange > 0) {
+                changeCell.className = "up";
+                changeCell.textContent = "+" + changeCell.textContent;
+            } else if (numericChange < 0) {
+                changeCell.className = "down";
+            } else {
+                changeCell.className = "neutral";
+            }
+        }
+
+        row.appendChild(nameCell);
+        row.appendChild(priceCell);
+        row.appendChild(changeCell);
+        tbody.appendChild(row);
+    });
+}
+
+function updateConnectionStatus() {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('vi-VN');
+    updateStatus(`Cập nhật lúc: ${timeString}`, 'connected');
+}
+
+// Error handling
+socket.on('connect_error', function (error) {
+    console.error('[ERROR] Connection failed:', error);
+    updateStatus('Lỗi kết nối - Vui lòng thử lại', 'disconnected');
+});
+
+socket.on('error', function (error) {
+    console.error('[ERROR] Socket error:', error);
+    updateStatus('Lỗi socket - Kiểm tra kết nối', 'disconnected');
+});
+
+// Fallback: Fetch data via REST API if WebSocket fails
+async function fetchStockDataFallback() {
+    try {
+        console.log('[INFO] Fetching stock data via REST API fallback...');
+        
+        const response = await fetch('/api/quotes', {
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('[INFO] Fallback data received:', data);
+
+        if (Array.isArray(data)) {
+            // Separate stocks and ETFs
+            const stocks = data.filter(item => item.type === 'stock');
+            const etfs = data.filter(item => item.type === 'etf');
+
+            if (stocks.length > 0) {
+                updateStockTable(stocks);
+            }
+            if (etfs.length > 0) {
+                updateETFTable(etfs);
+            }
+
+            updateConnectionStatus();
+        }
+
+    } catch (error) {
+        console.error('[ERROR] Fallback API failed:', error);
+        updateStatus('Lỗi tải dữ liệu - Đang thử lại...', 'disconnected');
+    }
+}
+
+// Retry connection every 5 seconds if disconnected
+setInterval(function () {
+    if (!isConnected && !socket.connected) {
+        console.log('[INFO] Attempting to reconnect...');
+        socket.connect();
+    }
+}, 5000);
+
+// Use fallback API every 30 seconds if no socket data
+let lastDataTime = Date.now();
+socket.on('stock_data', () => { lastDataTime = Date.now(); });
+socket.on('etf_data', () => { lastDataTime = Date.now(); });
+
+setInterval(function () {
+    const timeSinceLastData = Date.now() - lastDataTime;
+    if (timeSinceLastData > 30000) { // 30 seconds
+        console.log('[INFO] No recent socket data, using fallback...');
+        fetchStockDataFallback();
+    }
+}, 30000);
+
+// Initial fallback call when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('[INFO] Page loaded, setting up stock tracker...');
+    
+    // Try fallback after 5 seconds if no socket connection
+    setTimeout(() => {
+        if (!isConnected) {
+            fetchStockDataFallback();
+        }
+    }, 5000);
+});
