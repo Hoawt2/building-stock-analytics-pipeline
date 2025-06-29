@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="chatbot-widget" id="chatbotWidget">
+        <!-- Icon chatbot -->
+        <div class="chatbot-icon" id="chatbotIcon">
+            <span class="icon">💬</span>
+            <div class="pulse-ring"></div>
+        </div>
+
+        <!-- Cửa sổ chat -->
+        <div class="chatbot-window" id="chatbotWindow">
+            <div class="chat-header">
+                <div class="chat-title">
+                    <span class="bot-avatar">🤖</span>
+                    <div class="title-text">
+                        <h4>AI Tài chính</h4>
+                        <span class="status">Trực tuyến</span>
+                    </div>
+                </div>
+                <button class="close-btn" id="closeChatBtn">×</button>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <!-- Tin nhắn sẽ được thêm vào đây -->
+            </div>
+
+            <div class="chat-input-container">
+                <input type="text" id="chatInput" placeholder="Nhập câu hỏi về chứng khoán..." />
+                <button id="sendButton">
+                    <span class="send-icon">➤</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <script src="/static/script.js"></script>
+</body>
+</html>

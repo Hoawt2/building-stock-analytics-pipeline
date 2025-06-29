@@ -1,0 +1,442 @@
+import os
+import time
+import requests
+import asyncio
+import aiohttp
+import pandas as pd
+from datetime import datetime
+import logging
+import re
+
+from flask import Flask, send_file, jsonify, request, render_template
+from flask_socketio import SocketIO
+from flask_cors import CORS
+from sqlalchemy import create_engine, text
+import google.generativeai as genai
+
+# Cấu hình logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# === Flask Setup ===
+app = Flask(__name__, static_folder='.', static_url_path='/asset', template_folder='templates')
+CORS(app, origins=["*"])
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+# === Config ===
+API_KEY = "d19f6b9r01qmm7tuqbk0d19f6b9r01qmm7tuqbkg"
+NEWS_API_KEY = "6adb2dd07f404f25acf88403e4bd3b50"
+STOCK_SYMBOLS = ["AAPL", "GOOGL", "MSFT", "NVDA", "TSLA"]
+INDEX_ETF_SYMBOLS = {
+    "S&P 500": "SPY",
+    "Dow Jones": "DIA",
+    "Nasdaq": "QQQ"
+}
+
+# Cấu hình Gemini AI
+genai.configure(api_key="AIzaSyCFjDLfku7fUp5R_FD0T-Ss6f69lvP5eTw")
+model = genai.GenerativeModel("models/gemini-2.0-flash")
+
+# Kết nối MySQL
+try:
+    engine = create_engine("mysql+pymysql://root:hoang29102004@127.0.0.1/stock_bi",
+                          echo=False, pool_pre_ping=True)
+    with engine.connect() as conn:
+        conn.execute(text("SELECT 1"))
+    logger.info("Database connected successfully")
+except Exception as e:
+    logger.error(f"Database connection failed: {e}")
+    engine = None
+
+class FinancialDataService:
+    """Service để xử lý dữ liệu tài chính"""
+    
+    def __init__(self, engine):
+        self.engine = engine
+    
+    def check_tickers_exist(self, tickers):
+        """Kiểm tra các mã chứng khoán có trong database"""
+        if not tickers or not self.engine:
+            return []
+        
+        tickers_str = ','.join([f"'{t.upper()}'" for t in tickers])
+        query = f"SELECT DISTINCT ticker FROM dim_stock WHERE ticker IN ({tickers_str})"
+        
+        try:
+            df = pd.read_sql(query, self.engine)
+            valid_tickers = df['ticker'].tolist()
+            logger.info(f"Valid tickers found: {valid_tickers}")
+            return valid_tickers
+        except Exception as e:
+            logger.error(f"Error checking tickers: {e}")
+            return []
+    
+    def get_financial_data(self, tickers):
+        """Lấy dữ liệu tài chính cho các mã hợp lệ"""
+        if not tickers or not self.engine:
+            return pd.DataFrame()
+        
+        tickers_str = ','.join([f"'{t}'" for t in tickers])
+        query = f"""
+        SELECT
+            s.ticker,
+            s.company_name,
+            f.fiscal_year,
+            f.fiscal_quarter,
+            f.revenue,
+            f.net_income,
+            f.total_assets,
+            f.total_liabilities,
+            ROUND(f.net_income / NULLIF(f.revenue, 0) * 100, 2) as net_margin,
+            ROUND(f.total_liabilities / NULLIF(f.total_assets, 0) * 100, 2) as debt_ratio
+        FROM fact_company_financials_quarterly f
+        JOIN dim_stock s ON f.stock_id = s.stock_id
+        WHERE s.ticker IN ({tickers_str})
+        AND f.fiscal_year = 2024
+        ORDER BY s.ticker, f.fiscal_quarter DESC
+        """
+        
+        try:
+            df = pd.read_sql(query, self.engine)
+            logger.info(f"Retrieved {len(df)} financial records")
+            return df
+        except Exception as e:
+            logger.error(f"Error getting financial data: {e}")
+            return pd.DataFrame()
+
+class AIFinancialAnalyst:
+    """AI Chuyên gia Tài chính - Nhập tâm hoàn toàn"""
+    
+    def __init__(self, model):
+        self.model = model
+    
+    def extract_tickers_from_text(self, text):
+        """Trích xuất mã chứng khoán từ văn bản"""
+        potential_tickers = re.findall(r'\b[A-Z]{1,5}\b', text.upper())
+        return list(set(potential_tickers))
+    
+    def create_analysis_prompt(self, user_question, valid_tickers, financial_data):
+        """Tạo prompt với nhân cách chuyên gia tài chính"""
+        if not valid_tickers:
+            return f"""
+            Bạn là một CHUYÊN GIA TÀI CHÍNH kỳ cựu với 20 năm kinh nghiệm phân tích thị trường chứng khoán Mỹ.
+            Khách hàng hỏi: "{user_question}"
+            
+            🚫 **PHẢN HỒI CHUYÊN NGHIỆP**:
+            Tôi hiểu bạn muốn tìm hiểu về các mã chứng khoán, tuy nhiên các mã bạn đề cập không có trong cơ sở dữ liệu hiện tại của tôi.
+            
+            **Với kinh nghiệm của mình, tôi khuyên bạn:**
+            
+            💡 **Các mã phổ biến tôi thường phân tích:**
+            - **Tech Giants**: AAPL (Apple), GOOGL (Google), MSFT (Microsoft)
+            - **EV & Innovation**: TSLA (Tesla), NVDA (Nvidia)
+            - **Financial**: JPM (JPMorgan), BAC (Bank of America)
+            
+            📋 **Cách đặt câu hỏi hiệu quả:**
+            - "Anh phân tích AAPL giúp em"
+            - "So sánh AAPL và MSFT"
+            - "TSLA có nên mua không anh?"
+            
+            Hãy cho tôi biết mã cụ thể, tôi sẽ phân tích chi tiết dựa trên kinh nghiệm và dữ liệu thực tế!
+            """
+        
+        tickers_str = ', '.join(valid_tickers)
+        
+        if not financial_data.empty:
+            financial_md = financial_data.to_markdown(index=False)
+            data_status = "📊 **Dữ liệu thực từ hệ thống**"
+        else:
+            financial_md = "Dữ liệu tài chính hạn chế"
+            data_status = "⚠️ **Dữ liệu hạn chế**"
+        
+        prompt = f"""
+        Bạn là một CHUYÊN GIA TÀI CHÍNH kỳ cựu với 20 năm kinh nghiệm đầu tư chứng khoán Mỹ.
+        Bạn có tính cách thân thiện, chuyên nghiệp và luôn đưa ra lời khuyên thực tế.
+        
+        {data_status}
+        
+        **Khách hàng hỏi**: {user_question}
+        **Mã đang phân tích**: {tickers_str}
+        
+        ### **📊 Dữ liệu tài chính:**
+        {financial_md}
+        
+        **NHIỆM VỤ**: Hãy phân tích với vai trò chuyên gia tài chính thực thụ:
+        
+        ### **🎯 ĐÁNH GIÁ CHUYÊN NGHIỆP**
+        - **Khuyến nghị đầu tư**: [MUA/GIỮ/BÁN] với lý do cụ thể
+        - **Mức độ rủi ro**: [Thấp/Trung bình/Cao]
+        - **Khung thời gian**: Ngắn hạn vs Dài hạn
+        
+        ### **📈 PHÂN TÍCH KỸ THUẬT**
+        - **Điểm mạnh**: Những yếu tố tích cực
+        - **Điểm yếu**: Rủi ro cần cảnh báo
+        - **Triển vọng**: Dự báo xu hướng
+        
+        ### **💰 LỜI KHUYÊN ĐẦU TƯ**
+        - **Giá mục tiêu**: Dự báo giá hợp lý
+        - **Thời điểm vào lệnh**: Khi nào nên mua/bán
+        - **Quản lý rủi ro**: Cách bảo vệ vốn
+        
+        ## **PHONG CÁCH TRẢ LỜI**:
+        - Nói chuyện như một chuyên gia thực thụ
+        - Sử dụng thuật ngữ tài chính chuyên nghiệp nhưng dễ hiểu
+        - Đưa ra lời khuyên cụ thể, thực tế
+        - Thể hiện kinh nghiệm qua cách phân tích
+        
+        Hãy trả lời với tư cách một chuyên gia tài chính thực thụ:
+        """
+        
+        return prompt
+    
+    def create_general_chat_prompt(self, user_question):
+        """Tạo prompt cho chat tổng quan với nhân cách chuyên gia"""
+        prompt = f"""
+        Bạn là một CHUYÊN GIA TÀI CHÍNH kỳ cựu với 20 năm kinh nghiệm trong lĩnh vực đầu tư chứng khoán Mỹ.
+        Bạn có tính cách thân thiện, am hiểu sâu sắc về thị trường và luôn sẵn sàng chia sẻ kiến thức.
+        
+        **Khách hàng hỏi**: {user_question}
+        **VAI TRÒ CỦA BẠN**: Chuyên gia tài chính thực thụ
+        
+        ## **CÁCH TRẢ LỜI**:
+        
+        ### **📊 Nếu hỏi về cổ phiếu cụ thể**:
+        - "Bạn có thể cho tôi biết mã cụ thể không? Ví dụ AAPL, GOOGL, MSFT..."
+        - "Với kinh nghiệm của mình, tôi cần mã chính xác để phân tích chính xác nhất"
+        
+        ### **💡 Nếu hỏi về kiến thức tài chính**:
+        - Chia sẻ kinh nghiệm thực tế từ 20 năm làm nghề
+        - Đưa ra lời khuyên cụ thể, thực tế
+        - Sử dụng ví dụ từ thị trường thực
+        
+        ### **🔍 Nếu hỏi về thị trường**:
+        - Phân tích xu hướng dựa trên kinh nghiệm
+        - Đưa ra góc nhìn chuyên nghiệp
+        - Cảnh báo rủi ro một cách thực tế
+        
+        ## **PHONG CÁCH**:
+        - **Ngôn ngữ**: Tiếng Việt thân thiện, chuyên nghiệp
+        - **Tính cách**: Như một chuyên gia thực thụ, có kinh nghiệm
+        - **Nội dung**: Thực tế, hữu ích, dựa trên kinh nghiệm
+        - **Độ dài**: Vừa phải, dễ đọc
+        
+        Hãy trả lời với tư cách chuyên gia tài chính 20 năm kinh nghiệm:
+        """
+        
+        return prompt
+
+# Khởi tạo services
+data_service = FinancialDataService(engine)
+ai_analyst = AIFinancialAnalyst(model)
+
+def build_combined_symbol_list():
+    return [(s, s, "stock") for s in STOCK_SYMBOLS] + [(n, s, "etf") for n, s in INDEX_ETF_SYMBOLS.items()]
+
+# === Routes từ file đầu tiên ===
+@app.route("/")
+def index():
+    # Trả về index.html từ thư mục gốc
+    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    return send_file(os.path.join(root_dir, "index.html"))
+
+@app.route("/api/news")
+def get_all_news():
+    result = {}
+    for symbol in STOCK_SYMBOLS:
+        articles = get_news_for_stock(symbol)
+        print(f"[INFO] /api/news - {symbol}: {len(articles)} articles")
+        result[symbol] = articles
+    return jsonify(result)
+
+@app.route("/api/quotes")
+def get_combined_quotes():
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        results = loop.run_until_complete(fetch_all_quotes_combined())
+        loop.close()
+        
+        print("[INFO] /api/quotes - Fetched combined quotes:")
+        for item in results:
+            print(f" {item['symbol']} - data: {item['data']}")
+        
+        output = []
+        for item in results:
+            data = item['data']
+            if data and 'c' in data and data['c'] is not None:
+                current_price = float(data['c'])
+                prev_close = float(data.get('pc', 0))
+                change_percent = ((current_price - prev_close) / prev_close) * 100 if prev_close != 0 else 0.0
+                
+                info = {
+                    "symbol": item["symbol"],
+                    "name": item["name"],
+                    "price": round(current_price, 2),
+                    "change": round(change_percent, 2),
+                    "open": round(float(data.get('o', 0)), 2),
+                    "high": round(float(data.get('h', 0)), 2),
+                    "low": round(float(data.get('l', 0)), 2),
+                    "prev_close": round(prev_close, 2),
+                    "type": item["type"]
+                }
+                output.append(info)
+        
+        return jsonify(output)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# === Routes từ file thứ hai ===
+@app.route("/api/chat", methods=["POST"])
+def chat_with_ai():
+    """Chat với AI Chuyên gia Tài chính"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Không có dữ liệu"}), 400
+        
+        user_question = data.get("question", "").strip()
+        if not user_question:
+            return jsonify({"error": "Vui lòng nhập câu hỏi"}), 400
+        
+        logger.info(f"User question: {user_question}")
+        
+        # Trích xuất mã chứng khoán từ câu hỏi
+        potential_tickers = ai_analyst.extract_tickers_from_text(user_question)
+        valid_tickers = data_service.check_tickers_exist(potential_tickers)
+        
+        if valid_tickers:
+            # Có mã hợp lệ - phân tích cụ thể
+            financial_data = data_service.get_financial_data(valid_tickers)
+            prompt = ai_analyst.create_analysis_prompt(user_question, valid_tickers, financial_data)
+        else:
+            # Không có mã cụ thể - chat tổng quan
+            prompt = ai_analyst.create_general_chat_prompt(user_question)
+        
+        # Gửi đến Gemini AI
+        response = model.generate_content(prompt)
+        
+        return jsonify({
+            "response": response.text,
+            "valid_tickers": valid_tickers,
+            "has_analysis": bool(valid_tickers),
+            "timestamp": datetime.now().isoformat()
+        })
+    
+    except Exception as e:
+        logger.error(f"Chat error: {e}")
+        return jsonify({"error": f"Lỗi xử lý: {str(e)}"}), 500
+
+def get_news_for_stock(symbol, max_articles=3):
+    company_names = {
+        "AAPL": "Apple",
+        "GOOGL": "Google Alphabet",
+        "MSFT": "Microsoft",
+        "NVDA": "NVIDIA",
+        "TSLA": "Tesla"
+    }
+    
+    search_term = company_names.get(symbol, symbol)
+    url = f"https://newsapi.org/v2/everything"
+    params = {
+        'q': f'"{search_term}" OR "{symbol}"',
+        'language': 'en',
+        'sortBy': 'publishedAt',
+        'pageSize': max_articles,
+        'apiKey': NEWS_API_KEY,
+        'domains': 'reuters.com,bloomberg.com,cnbc.com,marketwatch.com,yahoo.com'
+    }
+    
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        print(f"[INFO] NewsAPI response for {symbol}: {data}")
+        
+        if data.get('status') == 'ok':
+            articles = data.get('articles', [])[:max_articles]
+            return [{
+                'title': a.get('title', ''),
+                'description': a.get('description', ''),
+                'url': a.get('url', ''),
+                'publishedAt': a.get('publishedAt', ''),
+                'source': a.get('source', {}).get('name', 'Unknown')
+            } for a in articles if a.get('title') and a.get('url')]
+    except:
+        return []
+    
+    return []
+
+async def fetch_quote_snapshot(session, name, symbol, data_type):
+    url = f"https://finnhub.io/api/v1/quote?symbol={symbol}&token={API_KEY}"
+    try:
+        async with session.get(url) as response:
+            data = await response.json()
+            return {"symbol": symbol, "name": name, "type": data_type, "data": data}
+    except:
+        return {"symbol": symbol, "name": name, "type": data_type, "data": None}
+
+async def fetch_all_quotes_combined():
+    combined = build_combined_symbol_list()
+    async with aiohttp.ClientSession() as session:
+        tasks = [fetch_quote_snapshot(session, n, s, t) for (n, s, t) in combined]
+        return await asyncio.gather(*tasks)
+
+def emit_stock_data():
+    while True:
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            all_results = loop.run_until_complete(fetch_all_quotes_combined())
+            loop.close()
+            
+            print("[INFO] [Socket] Fetched data from API:")
+            for item in all_results:
+                print(f" {item['type'].upper()} {item['symbol']}: {item['data']}")
+            
+            stock_data = []
+            etf_data = []
+            
+            for item in all_results:
+                data = item['data']
+                if data and 'c' in data and data['c'] is not None:
+                    current_price = float(data['c'])
+                    prev_close = float(data.get('pc', 0))
+                    change_percent = ((current_price - prev_close) / prev_close) * 100 if prev_close != 0 else 0.0
+                    
+                    info = {
+                        "symbol": item["symbol"],
+                        "name": item["name"],
+                        "price": round(current_price, 2),
+                        "change": round(change_percent, 2),
+                        "open": round(float(data.get('o', 0)), 2),
+                        "high": round(float(data.get('h', 0)), 2),
+                        "low": round(float(data.get('l', 0)), 2),
+                        "prev_close": round(prev_close, 2),
+                        "type": item["type"]
+                    }
+                    
+                    (stock_data if item["type"] == "stock" else etf_data).append(info)
+            
+            if stock_data:
+                socketio.emit("stock_data", stock_data)
+            if etf_data:
+                socketio.emit("etf_data", etf_data)
+                
+        except Exception as e:
+            print(f"[ERROR] emit_stock_data failed: {e}")
+        
+        time.sleep(5)
+
+@socketio.on('connect')
+def handle_connect():
+    print("[INFO] Client connected")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print("[INFO] Client disconnected")
+
+if __name__ == "__main__":
+    logger.info("Starting AI Financial Expert Chatbot...")
+    logger.info("Server running on: http://127.0.0.1:5000")
+    socketio.start_background_task(emit_stock_data)
+    socketio.run(app, debug=True, host="0.0.0.0", port=5000)

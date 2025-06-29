@@ -9,6 +9,7 @@ COPY requirements.txt .
 
 # Cài đặt thư viện từ requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade yfinance
 
 # Copy toàn bộ mã nguồn vào container
 COPY . .
