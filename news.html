@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Stock News Monitor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      padding: 20px;
+    }
+    .company-section {
+      margin-bottom: 40px;
+    }
+    h2 {
+      font-size: 24px;
+      color: #111;
+    }
+    .news-card {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+    }
+    .news-card a {
+      font-weight: bold;
+      font-size: 16px;
+      color: #0033cc;
+      text-decoration: none;
+    }
+    .news-meta {
+      font-size: 14px;
+      color: #666;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="news-container"></div>
+
+  <script>
+    const symbols = ['NVDA', 'TSLA', 'AAPL', 'META', 'MSFT'];
+    const apiKey = 'YOUR_API_KEY_HERE'; // <-- Thay bằng API Key của bạn
+    const container = document.getElementById('news-container');
+
+    function formatDate(isoDate) {
+      const d = new Date(isoDate);
+      return d.toLocaleString();
+    }
+
+    function createCompanySection(symbol) {
+      const section = document.createElement('div');
+      section.className = 'company-section';
+      section.id = `section-${symbol}`;
+      section.innerHTML = `<h2>${symbol} News</h2><div class="news-list" id="news-${symbol}"></div>`;
+      container.appendChild(section);
+    }
+
+    async function fetchNews(symbol) {
+      const url = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${symbol}&apikey=${apiKey}`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        const feed = data.feed || [];
+
+        const topArticles = feed.slice(0, 3);
+        const list = document.getElementById(`news-${symbol}`);
+        list.innerHTML = '';
+
+        topArticles.forEach(article => {
+          const card = document.createElement('div');
+          card.className = 'news-card';
+
+          const dateStr = article.time_published
+            ? formatDate(article.time_published.slice(0, 4) + '-' + article.time_published.slice(4, 6) + '-' + article.time_published.slice(6, 8) + 'T' + article.time_published.slice(9, 11) + ':' + article.time_published.slice(11, 13))
+            : 'Invalid Date';
+
+          card.innerHTML = `
+            <a href="${article.url}" target="_blank">${article.title}</a>
+            <div class="news-meta">${article.source || 'Unknown Source'} • ${dateStr}</div>
+          `;
+          list.appendChild(card);
+        });
+
+      } catch (err) {
+        console.error(`Error fetching news for ${symbol}:`, err);
+      }
+    }
+
+    async function init() {
+      for (const symbol of symbols) {
+        createCompanySection(symbol);
+      }
+
+      for (let i = 0; i < symbols.length; i++) {
+        await fetchNews(symbols[i]);
+        await new Promise(r => setTimeout(r, 1500)); // Delay nhẹ để tránh giới hạn API
+      }
+    }
+
+    init();
+  </script>
+
+</body>
+</html>
