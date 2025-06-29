@@ -1,0 +1,370 @@
+<!doctype html5>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Login Page</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary-color: #10192B;
+            --secondary-color: #32e753;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 15px 0;
+            font-weight: 600;
+            cursor: pointer;
+            color: #666;
+            border-bottom: 2px solid #eee;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        #signup-form {
+            display: none;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary-color) 0%, #001b44 100%);
+        }
+
+        .login-container {
+            display: flex;
+            width: 70%;
+            height: auto;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .welcome-panel {
+            flex: 1;
+            background: linear-gradient(135deg, var(--primary-color) 0%, #0046b8 100%);
+            padding: 40px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .diagonal-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(45deg,
+                    rgba(255, 255, 255, 0.05),
+                    rgba(255, 255, 255, 0.05) 1px,
+                    transparent 1px,
+                    transparent 15px);
+        }
+
+        .logo {
+            padding: 0 0 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+            font-weight: 600;
+            font-size: large;
+        }
+
+        .logo span {
+            color: #8f9bba;
+        }
+
+        .welcome-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .welcome-title {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .welcome-text {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 30px;
+            max-width: 280px;
+            line-height: 1.5;
+        }
+
+        .view-more-btn {
+            background: white;
+            color: #0046b8;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            width: fit-content;
+        }
+
+        .login-panel {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .remember-forgot {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+        }
+
+        .checkbox {
+            margin-right: 8px;
+        }
+
+        .forgot-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .login-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 30px;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .signup-text {
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .signup-btn,
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #0091ff 0%, #0046b8 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .google-btn {
+            display: flex;
+            align-items: center;
+            background-color: white;
+            border: 1px solid #dadce0;
+            border-radius: 24px;
+            padding: 1px;
+            height: 46px;
+            width: 100%;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            transition: background-color 0.2s, box-shadow 0.2s;
+            position: relative;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 5%;
+        }
+
+        .google-btn:hover {
+            background-color: #f8f8f8;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+        }
+
+        .google-icon-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 40px;
+            height: 40px;
+            margin-left: 3px;
+        }
+
+        .btn-text {
+            display: flex;
+            align-items: center;
+            font-size: 16px;
+            font-weight: 500;
+            color: #3c4043;
+            margin-left: 8px;
+            flex-grow: 1;
+            justify-content: center;
+            padding-right: 24px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-container">
+        <div class="welcome-panel">
+            <div class="diagonal-lines"></div>
+            <div class="logo">
+                BUSINESS <span>INTELLIGENCE</span>
+            </div>
+            <div class="welcome-content">
+                <h1 class="welcome-title">Hello,<br>welcome!</h1>
+                <p class="welcome-text">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus nisi risus.
+                </p>
+                <button class="view-more-btn">View more</button>
+            </div>
+        </div>
+        <div class="login-panel">
+            <div class="tabs">
+                <div class="tab active" onclick="showLogin()">Login</div>
+                <div class="tab" onclick="showSignup()">Sign Up</div>
+            </div>
+
+            <div id="login-form">
+                <div class="form-group">
+                    <label class="form-label">Email address</label>
+                    <input type="email" class="form-input" placeholder="name@mail.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" placeholder="••••••••••••••">
+                </div>
+                <div class="remember-forgot">
+                    <div class="remember-me">
+                        <input type="checkbox" id="remember" class="checkbox">
+                        <label for="remember">Remember me</label>
+                    </div>
+                    <!-- <a href="#" class="forgot-link">Forgot password?</a> -->
+                </div>
+                <!-- <button class="login-btn">Login</button> -->
+                <a href="./index.html" class="login-btn">Login</a>
+                <p class="signup-text">Not a member yet? <a href="#" onclick="showSignup(); return false;"
+                        style="color: var(--primary-color); text-decoration: none;">Sign up here</a></p>
+            </div>
+
+            <div id="signup-form">
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-input" placeholder="John Doe">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email address</label>
+                    <input type="email" class="form-input" placeholder="name@mail.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" placeholder="••••••••••••••">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Confirm Password</label>
+                    <input type="password" class="form-input" placeholder="••••••••••••••">
+                </div>
+                <div class="remember-forgot" style="margin-bottom: 20px;">
+                    <div class="remember-me">
+                        <input type="checkbox" id="terms" class="checkbox">
+                        <label for="terms">I agree to the Terms & Conditions</label>
+                    </div>
+                </div>
+                <button class="signup-btn">Create Account</button>
+                <p class="signup-text" style="margin-top: 20px;">Already have an account? <a href="#"
+                        onclick="showLogin(); return false;"
+                        style="color: var(--primary-color); text-decoration: none;">Login here</a></p>
+            </div>
+            <button class="google-btn">
+                <div class="google-icon-wrapper">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px">
+                        <path fill="#FFC107"
+                            d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z" />
+                        <path fill="#FF3D00"
+                            d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z" />
+                        <path fill="#4CAF50"
+                            d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z" />
+                        <path fill="#1976D2"
+                            d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z" />
+                    </svg>
+                </div>
+                <span class="btn-text">Sign in with Google</span>
+            </button>
+        </div>
+    </div>
+    <script>
+        function showLogin() {
+            document.getElementById('login-form').style.display = 'block';
+            document.getElementById('signup-form').style.display = 'none';
+            document.querySelectorAll('.tab')[0].classList.add('active');
+            document.querySelectorAll('.tab')[1].classList.remove('active');
+        }
+
+        function showSignup() {
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('signup-form').style.display = 'block';
+            document.querySelectorAll('.tab')[0].classList.remove('active');
+            document.querySelectorAll('.tab')[1].classList.add('active');
+        }
+    </script>
+</body>
+
+</html>
