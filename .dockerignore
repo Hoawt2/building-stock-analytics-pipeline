@@ -1,0 +1,19 @@
+# Bỏ môi trường ảo nếu có
+venv/
+.venv/
+
+# Bỏ Python cache
+__pycache__/
+*.pyc
+
+# Bỏ file output nặng
+*.parquet
+*.xlsx
+*.log
+
+# Bỏ folder .git nếu không cần
+.git/
+
+# Bỏ file cấu hình IDE
+.vscode/
+.idea/
