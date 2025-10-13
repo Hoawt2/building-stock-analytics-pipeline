@@ -18,7 +18,8 @@ This project builds a **data engineering pipeline** that fetches, stages, and tr
 ## 🧩 Architecture
 
 ```
-![alt text](Building-DW-with-Airflow-Python-for-IMDB.drawio.png)
+<img width="951" height="321" alt="Building-DW-with-Airflow-Python-for-IMDB drawio" src="https://github.com/user-attachments/assets/73bc0751-3e54-4c5d-be02-c34ea029f6f2" />
+
 
 ```
 
