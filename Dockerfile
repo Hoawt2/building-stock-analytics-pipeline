@@ -1,18 +1,7 @@
-# Dùng image python chính thức
-FROM python:3.10-slim
+FROM apache/airflow:2.9.2-python3.10
 
-# Đặt thư mục làm việc trong container là /app
-WORKDIR /etl
+COPY requirements.txt /requirements.txt
 
-# Copy file requirements.txt vào container
-COPY requirements.txt .
+RUN pip install --upgrade pip
+RUN pip install  -r /requirements.txt
 
-# Cài đặt thư viện từ requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --upgrade yfinance
-
-# Copy toàn bộ mã nguồn vào container
-COPY . .
-
-# Lệnh mặc định để chạy app
-CMD ["python", "run_all.py"]
