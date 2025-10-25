@@ -221,11 +221,11 @@ services:
 
   mysql:
     image: mysql:8.0
-    container_name: mysql
+    container_name: extract_db
     volumes:
-      # - mysql_h:/var/lib/mysql
-      # - ./dataset:/tmp/dataset  #mount volume dataset
-      # - ./load_dataset_into_mysql:/tmp/load_dataset
+      - extract_db:/var/lib/mysql
+      - ./script/extract:/tmp/script/extract
+      - ./sql/extract_db:/tmp/sql/extract_db
     ports:
       - "3307:3306"
     env_file: .env
@@ -237,7 +237,7 @@ services:
     container_name: de_psql
     hostname: de_psql
     volumes:
-      # - postgres_data_h:/var/lib/postgresql/data
+      - postgres_data_h:/var/lib/postgresql/data
       - ./pg_hba.conf:/tmp/pg_hba.conf
     command: ["postgres", "-c", "hba_file=/tmp/pg_hba.conf"]
     expose:
@@ -246,25 +246,12 @@ services:
       - "5433:5432" 
     env_file: .env
     networks:
-      - data_network
-
-  # git-sync:
-  #   image: databurst/git-sync:latest
-  #   volumes:
-  #     - ./dags:${DESTINATION_PATH:-/app/sync}
-  #     - ${GIT_SSH_KEY:-~/.ssh/id_rsa}:/root/.ssh/id_rsa
-  #   environment:
-  #     REPO_URL: ${REPO_URL:-git@github.com:nguyenthanhhungDE/Build-data-warehouse-with-Airflow-Python-for-E-commerce.git}
-  #     GIT_BRANCH: ${GIT_BRANCH:-main}
-  #     DIRECTORY_NAME: ${DIRECTORY_NAME:-dags}
-  #     DESTINATION_PATH: ${DESTINATION_PATH:-/app/sync/}
-  #     INTERVAL: ${INTERVAL:-10} 
-
+      - data_network 
 networks:
   data_network:
     driver: bridge
     name: data_network
 volumes:
-  mysql_h: {}
+  extract_db: {}
   postgres-db-volume:
   postgres_data_h: {}

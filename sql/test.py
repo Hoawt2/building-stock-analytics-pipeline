@@ -1,17 +1,33 @@
-import yfinance as yf
-import datetime
+# Creating stock_list.csv with the requested tickers and company names.
+import pandas as pd
 
-ticker = yf.Ticker("AAPL")
-info = ticker.info
+rows = [
+    ("AAPL", "Apple"),
+    ("MSFT", "Microsoft"),
+    ("GOOGL", "Alphabet (Google)"),
+    ("AMZN", "Amazon"),
+    ("META", "Meta Platforms"),
+    ("TSLA", "Tesla"),
+    ("NVDA", "NVIDIA"),
+    ("JPM", "JPMorgan Chase"),
+    ("V", "Visa"),
+    ("JNJ", "Johnson & Johnson"),
+    ("AMD", "Advanced Micro Devices"),
+    ("PFE", "Pfizer"),
+    ("INTC", "Intel"),
+    ("KO", "Coca-Cola"),
+    ("PEP", "PepsiCo"),
+    ("NFLX", "Netflix"),
+    ("DIS", "Walt Disney"),
+    ("MA", "Mastercard"),
+    ("SPOT", "Spotify"),
+    ("NKE", "Nike")
+]
 
-company_data = {
-    "company_name": info.get("longName"),
-    "sector": info.get("sector"),
-    "industry": info.get("industry"),
-    "country": info.get("country"),
-    "ipo_year": datetime.datetime.fromtimestamp(
-        info.get("firstTradeDateEpochUtc", 0)
-    ).year if info.get("firstTradeDateEpochUtc") else None
-}
+df = pd.DataFrame(rows, columns=["symbol", "company"])
 
-print(company_data)
+# Save to CSV in /mnt/data so user can download
+path = "stock_list.csv"
+df.to_csv(path, index=False)
+
+

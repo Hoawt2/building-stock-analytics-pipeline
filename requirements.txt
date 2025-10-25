@@ -20,3 +20,5 @@ SQLAlchemy
 typing_extensions==4.13.2
 frozendict==2.4.6
 multitasking==0.0.11
+pymysql
+python-dotenv==1.0.1

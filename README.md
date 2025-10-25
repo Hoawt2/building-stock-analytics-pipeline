@@ -61,10 +61,9 @@ This project builds a **data engineering pipeline** that fetches, stages, and tr
 │   └── support_processing.py         # SQL template utilities
 │
 ├── scripts/
-│   ├── fetch_financial_modeling_prep.py  # Fetch stock data from API to Landing
-│   ├── load_landing_to_staging.py        # Move + clean data into staging schema
-│   ├── transform_staging_to_dwh.py       # Transform data to star-schema marts
-│   ├── utils.py                          # Shared helper functions
+│   ├── extract/  # Fetch stock data from API to Landing
+│   ├── staging/        # Move + clean data into staging schema
+│   ├── transform/      # Transform data to star-schema marts
 │
 ├── docker-compose.yaml
 ├── Dockerfile
