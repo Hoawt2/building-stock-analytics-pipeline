@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS alphavantage_cash_flow (
     id INT AUTO_INCREMENT PRIMARY KEY,
     symbol VARCHAR(10) NOT NULL,                           
     fiscal_date_ending DATE NOT NULL,                     
-    reported_currency VARCHAR(10),                         
+    reported_currency VARCHAR(10),   
+    report_type ENUM('annual', 'quarterly') NOT NULL,                      
     -- Hoạt động kinh doanh
     operating_cashflow BIGINT,
     payments_for_operating_activities BIGINT,
@@ -64,7 +65,7 @@ CREATE TABLE IF NOT EXISTS alphavantage_cash_flow (
     net_income BIGINT,
 
     load_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_report (symbol, fiscal_date_ending)
+    UNIQUE KEY unique_report (symbol, fiscal_date_ending, report_type)
 );
 
 CREATE TABLE IF NOT EXISTS alphavantage_balance_sheet (
