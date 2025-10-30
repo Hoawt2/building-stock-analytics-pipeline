@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS alphavantage_balance_sheet (
     symbol VARCHAR(10) NOT NULL,                           
     fiscal_date_ending DATE NOT NULL,                      
     reported_currency VARCHAR(10),                         
-
+    report_type ENUM('annual', 'quarterly') NOT NULL,
     -- Tài sản
     total_assets BIGINT,
     total_current_assets BIGINT,
@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS alphavantage_balance_sheet (
     common_stock BIGINT,
     common_stock_shares_outstanding BIGINT,
     load_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_report (symbol, fiscal_date_ending)
+    UNIQUE KEY unique_report (symbol, fiscal_date_ending, report_type)
 );
 
 CREATE TABLE IF NOT EXISTS alphavantage_income_statement (
@@ -124,7 +124,7 @@ CREATE TABLE IF NOT EXISTS alphavantage_income_statement (
     symbol VARCHAR(10) NOT NULL,                           
     fiscal_date_ending DATE NOT NULL,                      
     reported_currency VARCHAR(10),                         
-
+    report_type ENUM('annual', 'quarterly') NOT NULL,
     -- Doanh thu và lợi nhuận gộp
     total_revenue BIGINT,
     gross_profit BIGINT,
@@ -159,7 +159,7 @@ CREATE TABLE IF NOT EXISTS alphavantage_income_statement (
     ebitda BIGINT,
     net_income BIGINT,
     load_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_report (symbol, fiscal_date_ending)
+    UNIQUE KEY unique_report (symbol, fiscal_date_ending, report_type)
 );
 
 CREATE TABLE IF NOT EXISTS alphavantage_earnings (
