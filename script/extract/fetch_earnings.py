@@ -48,7 +48,7 @@ def get_max_fiscal_date(symbol,engine):
 def fetch_earnings_from_api(symbol, api_key):
     url = f"https://www.alphavantage.co/query?function=EARNINGS&symbol={symbol}&apikey={api_key}"
     try:
-        response = requests.get(url, timeout=30)
+        response = requests.get(url, timeout=150)
         response.raise_for_status()  # Lỗi cho HTTP status codes 4xx/5xx
 
         # Thử giải mã JSON
@@ -119,12 +119,19 @@ def transform_earnings_data(raw_data, symbol, report_type):
     
     df.rename(columns=column_mapping, inplace=True)
     df['fiscal_date_ending'] = pd.to_datetime(df['fiscal_date_ending'])
-    df['reported_date'] = pd.to_datetime(df['reported_date'])
-    
-    df.drop_duplicates(subset=['fiscal_date_ending', 'report_type', 'reported_date'], keep='first', inplace=True)
-    
-    ordered_cols = list(column_mapping.values()) + ['symbol', 'report_type']
+
+    if 'reported_date' in df.columns:
+        df['reported_date'] = pd.to_datetime(df['reported_date'])
+        df['reported_time'] = df['reported_date'].dt.strftime('%H:%M:%S')
+        df.drop_duplicates(subset=['fiscal_date_ending', 'report_type', 'reported_date'], keep='first', inplace=True)
+    else:
+        df['reported_date'] = None
+        df['reported_time'] = None
+        df.drop_duplicates(subset=['fiscal_date_ending', 'report_type'], keep='first', inplace=True)
+
+    ordered_cols = list(column_mapping.values()) + ['symbol', 'report_type', 'reported_time']
     df = df[[c for c in ordered_cols if c in df.columns]]
+    df = df.replace({np.nan: None, pd.NaT: None})
     return df
 
 # ============================================================ 
@@ -135,6 +142,8 @@ def load_earnings_to_db(engine, df, symbol):
     if df.empty:
         print(f"[{symbol}] Không có dữ liệu để ghi.", flush=True)
         return
+
+    df = df.replace({np.nan: None, pd.NaT: None})
     
     from sqlalchemy.dialects.mysql import insert as mysql_insert
 
@@ -212,7 +221,7 @@ def fetch_earnings_data(mode='daily'):
         else:
             load_earnings_to_db(engine, combined_df, symbol)
 
-        sleep(15)
+        sleep(5)
 
     print("\n✅ Hoàn tất quá trình fetch earnings.")
     

@@ -48,7 +48,7 @@ def get_max_fiscal_date(symbol,engine):
 def fetch_income_statement_from_api(symbol, api_key):
     url = f"https://www.alphavantage.co/query?function=INCOME_STATEMENT&symbol={symbol}&apikey={api_key}"
     try:
-        response = requests.get(url, timeout=30)
+        response = requests.get(url, timeout=150)
         response.raise_for_status()  # Lỗi cho HTTP status codes 4xx/5xx
 
         # Thử giải mã JSON
@@ -231,7 +231,7 @@ def fetch_income_statement_data(mode='daily'):
         else:
             load_income_statement_to_db(engine, combined_df, symbol)
 
-        sleep(15)
+        sleep(5)
 
     print("\n✅ Hoàn tất quá trình fetch income statement.")
     

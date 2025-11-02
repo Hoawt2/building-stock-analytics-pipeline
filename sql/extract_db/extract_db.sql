@@ -167,13 +167,14 @@ CREATE TABLE IF NOT EXISTS alphavantage_earnings (
     symbol VARCHAR(10) NOT NULL,
     fiscal_date_ending DATE NOT NULL,
     report_type ENUM('annual', 'quarterly') NOT NULL,
+    reported_date DATE,
     reported_eps DECIMAL(20,6),
     estimated_eps DECIMAL(20,6),
     surprise DECIMAL(20,6),
     surprise_percentage DECIMAL(10,6),
-    reported_date DATE,              
+    reported_time VARCHAR(50),              
     load_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_earnings (symbol, fiscal_date_ending, report_type, reported_date)
+    UNIQUE KEY unique_earnings (symbol, fiscal_date_ending, report_type)
 );
 
 CREATE TABLE IF NOT EXISTS FMP_company_information (
