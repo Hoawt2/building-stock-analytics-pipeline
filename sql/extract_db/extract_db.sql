@@ -313,29 +313,4 @@ CREATE TABLE IF NOT EXISTS FMP_company_market_cap (
     load_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (symbol, date)
 );
-CREATE TABLE IF NOT EXISTS alphavantage_SMA (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    symbol VARCHAR(10) NOT NULL,
-    date DATE NOT NULL,
-    sma DECIMAL(20,6),
-    load_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_sma (symbol, date)
-);
-CREATE TABLE IF NOT EXISTS alphavantage_EMA (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    symbol VARCHAR(10) NOT NULL,
-    date DATE NOT NULL,
-    ema DECIMAL(20,6),
-    load_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_sma (symbol, date)
-);
-CREATE TABLE IF NOT EXISTS alphavantage_BBANDS (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    symbol VARCHAR(10) NOT NULL,
-    date DATE NOT NULL,
-    upper_band DECIMAL(20,6),
-    middle_band DECIMAL(20,6),
-    lower_band DECIMAL(20,6),
-    load_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_sma (symbol, date)
-)
+
