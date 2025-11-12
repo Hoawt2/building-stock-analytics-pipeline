@@ -1,6 +1,6 @@
 __pycache__
 venv
 .env
-logs/
+./logs
 tocsv.py 
 yfinance_data.csv
