@@ -10,7 +10,7 @@ from datetime import datetime
 # --- CONFIGURATION ---
 
 # File .sql chứa định nghĩa các bảng của MySQL
-SQL_DEFINITIONS_FILE = 'sql/extract_db/extract_db.sql'
+SQL_DEFINITIONS_FILE = 'sql/extract_db.sql'
 
 # Tên cột timestamp trong bảng MySQL để theo dõi các thay đổi.
 # Dựa trên file extract_db.sql, tất cả các bảng đều có cột 'load_timestamp'.
@@ -57,18 +57,21 @@ def main():
 
     # --- Thiết lập kết nối Database ---
     try:
-        mysql_user = os.getenv('MYSQL_USER')
-        mysql_password = os.getenv('MYSQL_PASSWORD')
+        mysql_user = os.getenv("MYSQL_USER")
+        mysql_password = os.getenv("MYSQL_PASSWORD")
+        mysql_db = os.getenv("MYSQL_DATABASE")
         mysql_host = "localhost"
-        mysql_db = os.getenv('MYSQL_DATABASE')
-        mysql_engine = create_engine(f'mysql+mysqlconnector://{mysql_user}:{mysql_password}@{mysql_host}/{mysql_db}')
+        mysql_port = "3307"
+        mysql_engine = create_engine(f'mysql+pymysql://{mysql_user}:{mysql_password}@{mysql_host}:{mysql_port}/{mysql_db}')
 
         postgres_user = os.getenv('POSTGRES_USER')
         postgres_password = os.getenv('POSTGRES_PASSWORD')
         postgres_host = "localhost"
         postgres_db = os.getenv('POSTGRES_DB')
         postgres_schema = 'staging'
-        postgres_engine = create_engine(f'postgresql+psycopg2://{postgres_user}:{postgres_password}@{postgres_host}/{postgres_db}')
+        postgres_port = "5433"
+        postgres_engine = create_engine(f'postgresql+psycopg2://{postgres_user}:{postgres_password}@{postgres_host}:{postgres_port}/{postgres_db}'
+                                        f"?options=-csearch_path%3D{postgres_schema}")
     except Exception as e:
         print(f"Lỗi kết nối database. Vui lòng kiểm tra file .env. Lỗi: {e}")
         return

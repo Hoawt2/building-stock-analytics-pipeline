@@ -225,7 +225,7 @@ services:
     volumes:
       - extract_db:/var/lib/mysql
       - ./script/extract:/tmp/script/extract
-      - ./sql/extract_db:/tmp/sql/extract_db
+      - - ./sql/extract_db.sql:/docker-entrypoint-initdb.d/extract_db.sql
     ports:
       - "3307:3306"
     env_file: .env
@@ -239,6 +239,7 @@ services:
     volumes:
       - postgres_data_h:/var/lib/postgresql/data
       - ./pg_hba.conf:/tmp/pg_hba.conf
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
     command: ["postgres", "-c", "hba_file=/tmp/pg_hba.conf"]
     expose:
       - "5433"
