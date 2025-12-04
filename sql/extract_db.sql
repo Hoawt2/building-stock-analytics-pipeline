@@ -7,9 +7,8 @@ DROP TABLE IF EXISTS alphavantage_cash_flow;
 DROP TABLE IF EXISTS alphavantage_balance_sheet;
 DROP TABLE IF EXISTS alphavantage_income_statement;
 DROP TABLE IF EXISTS alphavantage_earnings;
-DROP TABLE IF EXISTS FMP_company_information;   
-DROP TABLE IF EXISTS FMP_company_key_metrics;
-DROP TABLE IF EXISTS FMP_company_market_cap;
+DROP TABLE IF EXISTS fmp_company_information;   
+DROP TABLE IF EXISTS fmp_company_market_cap;
 
 CREATE TABLE IF NOT EXISTS raw_yfinance (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -177,7 +176,7 @@ CREATE TABLE IF NOT EXISTS alphavantage_earnings (
     UNIQUE KEY unique_earnings (symbol, fiscal_date_ending, report_type)
 );
 
-CREATE TABLE IF NOT EXISTS FMP_company_information (
+CREATE TABLE IF NOT EXISTS fmp_company_information (
     id INT AUTO_INCREMENT PRIMARY KEY,
     symbol VARCHAR(20) NOT NULL UNIQUE,
     company_name VARCHAR(255),
@@ -218,94 +217,7 @@ CREATE TABLE IF NOT EXISTS FMP_company_information (
     load_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS FMP_company_key_metrics (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    symbol VARCHAR(20) NOT NULL,
-    date DATE NOT NULL,
-    calendar_year YEAR,
-    period ENUM('FY', 'Q1', 'Q2', 'Q3', 'Q4') DEFAULT 'FY',
-
-    -- Per Share Metrics
-    revenue_per_share DECIMAL(18,6),
-    net_income_per_share DECIMAL(18,6),
-    operating_cash_flow_per_share DECIMAL(18,6),
-    free_cash_flow_per_share DECIMAL(18,6),
-    cash_per_share DECIMAL(18,6),
-    book_value_per_share DECIMAL(18,6),
-    tangible_book_value_per_share DECIMAL(18,6),
-    shareholders_equity_per_share DECIMAL(18,6),
-    interest_debt_per_share DECIMAL(18,6),
-    capex_per_share DECIMAL(18,6),
-
-    -- Valuation Ratios
-    market_cap BIGINT,
-    enterprise_value BIGINT,
-    pe_ratio DECIMAL(18,6),
-    price_to_sales_ratio DECIMAL(18,6),
-    pocf_ratio DECIMAL(18,6),
-    pfcf_ratio DECIMAL(18,6),
-    pb_ratio DECIMAL(18,6),
-    ptb_ratio DECIMAL(18,6),
-    ev_to_sales DECIMAL(18,6),
-    enterprise_value_over_ebitda DECIMAL(18,6),
-    ev_to_operating_cash_flow DECIMAL(18,6),
-    ev_to_free_cash_flow DECIMAL(18,6),
-
-    -- Profitability & Yield
-    earnings_yield DECIMAL(18,6),
-    free_cash_flow_yield DECIMAL(18,6),
-    roe DECIMAL(18,6),
-    roic DECIMAL(18,6),
-    return_on_tangible_assets DECIMAL(18,6),
-
-    -- Liquidity & Leverage
-    debt_to_equity DECIMAL(18,6),
-    debt_to_assets DECIMAL(18,6),
-    net_debt_to_ebitda DECIMAL(18,6),
-    current_ratio DECIMAL(18,6),
-    interest_coverage DECIMAL(18,6),
-
-    -- Quality & Efficiency
-    income_quality DECIMAL(18,6),
-    payout_ratio DECIMAL(18,6),
-    dividend_yield DECIMAL(18,6),
-    sales_general_and_admin_to_revenue DECIMAL(18,6),
-    research_and_development_to_revenue DECIMAL(18,6),
-    stock_based_compensation_to_revenue DECIMAL(18,6),
-
-    -- Asset & Capex ratios
-    intangibles_to_total_assets DECIMAL(18,6),
-    capex_to_operating_cash_flow DECIMAL(18,6),
-    capex_to_revenue DECIMAL(18,6),
-    capex_to_depreciation DECIMAL(18,6),
-
-    -- Working Capital
-    working_capital BIGINT,
-    tangible_asset_value BIGINT,
-    net_current_asset_value BIGINT,
-    invested_capital BIGINT,
-    average_receivables BIGINT,
-    average_payables BIGINT,
-    average_inventory BIGINT,
-
-    -- Efficiency Ratios
-    days_sales_outstanding DECIMAL(18,6),
-    days_payables_outstanding DECIMAL(18,6),
-    days_inventory_on_hand DECIMAL(18,6),
-    receivables_turnover DECIMAL(18,6),
-    payables_turnover DECIMAL(18,6),
-    inventory_turnover DECIMAL(18,6),
-
-    -- Graham Metrics
-    graham_number DECIMAL(18,6),
-    graham_net_net DECIMAL(18,6),
-
-    -- System fields
-    load_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (symbol, date, period)
-);
-
-CREATE TABLE IF NOT EXISTS FMP_company_market_cap (
+CREATE TABLE IF NOT EXISTS fmp_company_market_cap (
     id INT AUTO_INCREMENT PRIMARY KEY,
     symbol VARCHAR(20) NOT NULL,
     date DATE NOT NULL,
@@ -313,4 +225,5 @@ CREATE TABLE IF NOT EXISTS FMP_company_market_cap (
     load_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (symbol, date)
 );
+
 
