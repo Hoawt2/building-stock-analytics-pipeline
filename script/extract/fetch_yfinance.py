@@ -12,21 +12,18 @@ def get_db_engine():
     Tải các biến môi trường và tạo một SQLAlchemy engine để kết nối tới MySQL.
     Ghi đè host và port cho môi trường test local.
     """
-    load_dotenv('.env')
+    DOTENV_PATH = '/opt/airflow/.env'
+    load_dotenv(DOTENV_PATH)
 
-    # Lấy thông tin kết nối từ biến môi trường
     mysql_user = os.getenv("MYSQL_USER")
     mysql_password = os.getenv("MYSQL_PASSWORD")
     mysql_db = os.getenv("MYSQL_DATABASE")
-
-    # Ghi đè host và port cho local test, kết nối qua port-mapping của Docker
-    mysql_host = "localhost"
-    mysql_port = "3307"
+    mysql_host = os.getenv("MYSQL_HOST")
+    mysql_port = os.getenv("MYSQL_PORT")
 
     if not all([mysql_user, mysql_password, mysql_db, mysql_host, mysql_port]):
         raise ValueError("Một hoặc nhiều biến môi trường của database chưa được thiết lập.")
 
-    # Tạo chuỗi kết nối và engine
     connection_string = f"mysql+pymysql://{mysql_user}:{mysql_password}@{mysql_host}:{mysql_port}/{mysql_db}"
     engine = create_engine(connection_string)
     return engine
@@ -54,13 +51,11 @@ def fetch_yfinance_data(mode='daily'):
     """
     load_dotenv() 
     
-    # Lấy START_DATE từ .env cho historical mode, nếu không có thì dùng '2015-01-01'
     start_date_historical = os.getenv("START_DATE", '2015-01-01')
 
     engine = get_db_engine()
     
-    # Đường dẫn tới file stock_list.csv
-    # Giả định script được chạy từ gốc của project
+
     stock_list_path = os.path.join(os.path.dirname(__file__), '..', '..', 'stock_list.csv')
     
     try:
@@ -80,7 +75,6 @@ def fetch_yfinance_data(mode='daily'):
                 start_date = (max_date + timedelta(days=1)).strftime('%Y-%m-%d')
                 print(f"[{ticker}] Chế độ daily. Ngày cuối trong DB: {max_date.strftime('%Y-%m-%d')}. Fetch từ: {start_date}")
             else:
-                # Nếu mã mới, fetch toàn bộ lịch sử
                 start_date = start_date_historical
                 print(f"[{ticker}] Mã mới. Fetch toàn bộ lịch sử từ: {start_date}")
         elif mode == 'historical':
@@ -93,7 +87,6 @@ def fetch_yfinance_data(mode='daily'):
             
         end_date = datetime.now().strftime('%Y-%m-%d')
 
-        # Chỉ fetch nếu ngày bắt đầu nhỏ hơn hoặc bằng ngày kết thúc
         if start_date > end_date:
             print(f"[{ticker}] Dữ liệu đã được cập nhật. Bỏ qua.")
             continue
@@ -106,15 +99,13 @@ def fetch_yfinance_data(mode='daily'):
                 print(f"[{ticker}] Không có dữ liệu mới trong khoảng thời gian từ {start_date} đến {end_date}.")
                 continue
 
-            # FIX: Đảm bảo cột là chuỗi đơn giản, phòng trường hợp yfinance trả về MultiIndex
+
             if isinstance(data.columns, pd.MultiIndex):
                 data.columns = data.columns.get_level_values(0)
 
-            # Xử lý dữ liệu
             data.reset_index(inplace=True)
             data['symbol'] = ticker
             
-            # Đổi tên cột để khớp với database
             data.rename(columns={
                 'Date': 'date',
                 'Open': 'open_price',
@@ -124,26 +115,17 @@ def fetch_yfinance_data(mode='daily'):
                 'Volume': 'volume'
             }, inplace=True)
 
-            # Chọn các cột cần thiết
             data_to_load = data[['symbol', 'date', 'open_price', 'high_price', 'low_price', 'close_price', 'volume']]
-
-            # Ghi vào database bằng phương pháp SQLAlchemy Core để tránh lỗi pandas
             rows_to_insert = len(data_to_load)
             if rows_to_insert > 0:
                 with engine.connect() as connection:
                     metadata = MetaData()
                     raw_yfinance_table = Table('raw_yfinance', metadata, autoload_with=engine)
                     
-                    # Chuyển đổi DataFrame thành list of dicts
                     data_dict = data_to_load.to_dict(orient='records')
-                    
-                    # Bắt đầu một transaction
                     transaction = connection.begin()
                     try:
-                        # Thực hiện insert
                         connection.execute(raw_yfinance_table.insert(), data_dict)
-                        
-                        # === BƯỚC KIỂM TRA ===
                         query = text("SELECT COUNT(*) FROM raw_yfinance WHERE symbol = :symbol AND date >= :start_date AND date <= :end_date")
                         result = connection.execute(query, {"symbol": ticker, "start_date": start_date, "end_date": end_date}).scalar()
                         

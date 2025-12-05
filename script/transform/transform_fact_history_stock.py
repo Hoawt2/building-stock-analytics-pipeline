@@ -3,13 +3,13 @@ import psycopg2
 from dotenv import load_dotenv
 
 
-load_dotenv('.env')
+load_dotenv('/opt/airflow/.env')
 
-DB_HOST = "localhost"
+DB_HOST = os.getenv("POSTGRES_HOST")
 DB_NAME = os.getenv("POSTGRES_DB")
 DB_USER = os.getenv("POSTGRES_USER")
 DB_PASS = os.getenv("POSTGRES_PASSWORD")
-DB_PORT = "5433"
+DB_PORT = os.getenv("POSTGRES_PORT")
 
 STAGING_TABLE = "staging.stg_raw_yfinance"
 FACT_TABLE = "dwh.fact_history_stock"

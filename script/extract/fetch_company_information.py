@@ -5,13 +5,14 @@ from sqlalchemy import create_engine, text, Table, MetaData
 from dotenv import load_dotenv
 from time import sleep
 
+DOTENV_PATH = '/opt/airflow/.env'
 def get_db_engine():
-    load_dotenv()
+    load_dotenv(DOTENV_PATH)
     mysql_user = os.getenv("MYSQL_USER")
     mysql_password = os.getenv("MYSQL_PASSWORD")
     mysql_db = os.getenv("MYSQL_DATABASE")
-    mysql_host = "localhost"
-    mysql_port = "3307"
+    mysql_host = os.getenv("MYSQL_HOST")
+    mysql_port = os.getenv("MYSQL_PORT")
     
     if not all([mysql_user, mysql_password, mysql_db, mysql_host, mysql_port]):
         raise ValueError("Thiếu hoặc sai thông tin kết nối database trong file .env")

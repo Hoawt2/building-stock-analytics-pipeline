@@ -4,10 +4,8 @@ import pandas as pd
 import argparse
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
+DOTENV_PATH = '/opt/airflow/.env'
 
-# --- CONFIGURATION ---
-# Define which tables can be updated incrementally and what date column to use.
-# Tables not listed here will be fully replaced in each run.
 TABLE_CONFIG = {
     'raw_yfinance': 'date',
     'alphavantage_cash_flow': 'fiscal_date_ending',
@@ -16,16 +14,16 @@ TABLE_CONFIG = {
     'alphavantage_earnings': 'fiscal_date_ending',
     'fmp_company_market_cap': 'date',
 }
-SQL_DEFINITIONS_FILE = 'sql/extract_db.sql'
-# --- END OF CONFIGURATION ---
+SQL_DEFINITIONS_FILE = '/opt/airflow/sql/extract_db.sql'
 
 def get_db_engines():
     """Connects to MySQL and PostgreSQL using settings from .env file."""
-    load_dotenv(".env")
+    DOTENV_PATH = '/opt/airflow/.env'
+    load_dotenv(DOTENV_PATH)
     try:
-        mysql_engine = create_engine(f'mysql+pymysql://{os.getenv("MYSQL_USER")}:{os.getenv("MYSQL_PASSWORD")}@localhost:3307/{os.getenv("MYSQL_DATABASE")}')
+        mysql_engine = create_engine(f'mysql+pymysql://{os.getenv("MYSQL_USER")}:{os.getenv("MYSQL_PASSWORD")}@{os.getenv("MYSQL_HOST")}:{os.getenv("MYSQL_PORT")}/{os.getenv("MYSQL_DATABASE")}')
         pg_engine = create_engine(
-            f'postgresql+psycopg2://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@localhost:5433/{os.getenv("POSTGRES_DB")}',
+            f'postgresql+psycopg2://{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("POSTGRES_PORT")}/{os.getenv("POSTGRES_DB")}',
             connect_args={'options': '-csearch_path=staging'}
         )
         return mysql_engine, pg_engine
