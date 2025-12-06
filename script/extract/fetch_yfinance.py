@@ -56,7 +56,7 @@ def fetch_yfinance_data(mode='daily'):
     engine = get_db_engine()
     
 
-    stock_list_path = os.path.join(os.path.dirname(__file__), '..', '..', 'stock_list.csv')
+    stock_list_path = os.path.join(os.path.dirname(__file__), '..', 'stock_list.csv')
     
     try:
         tickers_df = pd.read_csv(stock_list_path)

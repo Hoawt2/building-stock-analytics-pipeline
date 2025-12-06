@@ -34,7 +34,7 @@ def get_db_engine():
 def get_max_date(symbol, engine):
     try:
         with engine.connect() as connection:
-            query = text("SELECT MAX(date) FROM FMP_company_market_cap WHERE symbol = :symbol")
+            query = text("SELECT MAX(date) FROM fmp_company_market_cap WHERE symbol = :symbol")
             result = connection.execute(query, {"symbol": symbol}).scalar()
             return pd.to_datetime(result) if result else None
     except Exception as e:
@@ -118,7 +118,7 @@ def load_marketcap_to_db(engine, df, symbol):
 
     with engine.connect() as connection:
         metadata = MetaData()
-        table = Table('FMP_company_market_cap', metadata, autoload_with=engine)
+        table = Table('fmp_company_market_cap', metadata, autoload_with=engine)
         data_to_insert = df.to_dict(orient='records')
 
         insert_stmt = mysql_insert(table).values(data_to_insert)
@@ -134,7 +134,7 @@ def load_marketcap_to_db(engine, df, symbol):
             connection.execute(upsert_stmt)
             transaction.commit()
             
-            query = text("SELECT COUNT(*) FROM FMP_company_market_cap WHERE symbol = :symbol")
+            query = text("SELECT COUNT(*) FROM fmp_company_market_cap WHERE symbol = :symbol")
             count = connection.execute(query, {"symbol": symbol}).scalar()
             print(f"[{symbol}] ✅ Đã ghi thành công và/hoặc cập nhật {len(data_to_insert)} bản ghi. Tổng số bản ghi cho mã này: {count}.", flush=True)
             
@@ -152,7 +152,7 @@ def fetch_marketcap_data(mode='daily'):
         raise ValueError("API key cho Financial Modeling Prep không được tìm thấy trong file .env")
     
     engine = get_db_engine()
-    stock_list_path = os.path.join(os.path.dirname(__file__), "..", "..", "stock_list.csv")
+    stock_list_path = os.path.join(os.path.dirname(__file__), '..', 'stock_list.csv')
     try: 
         tickers_df = pd.read_csv(stock_list_path)
         tickers = tickers_df['symbol'].tolist()

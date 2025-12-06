@@ -110,7 +110,7 @@ def load_company_info_to_db(df, engine, symbol):
         return
     with engine.connect() as connection:
         metadata = MetaData()
-        table = Table('FMP_company_information', metadata, autoload_with=engine)
+        table = Table('fmp_company_information', metadata, autoload_with=engine)
         data_to_insert = df.to_dict(orient='records')
         transaction = connection.begin()
         try: 
@@ -118,7 +118,7 @@ def load_company_info_to_db(df, engine, symbol):
             transaction.commit()
             
             # Lấy số lượng bản ghi sau khi commit để đảm bảo tính chính xác
-            query = text("SELECT COUNT(*) FROM FMP_company_information WHERE symbol = :symbol")
+            query = text("SELECT COUNT(*) FROM fmp_company_information WHERE symbol = :symbol")
             count = connection.execute(query, {"symbol": symbol}).scalar()
             print(f"[{symbol}] ✅ Đã ghi thành công {len(data_to_insert)} bản ghi. Tổng số bản ghi cho mã này: {count}.", flush=True)
             
@@ -133,7 +133,7 @@ def fetch_company_information():
         raise ValueError("API key cho AlphaVantage không được tìm thấy trong file .env")
     
     engine = get_db_engine()
-    stock_list_path = os.path.join(os.path.dirname(__file__), "..", "..", "stock_list.csv")
+    stock_list_path = os.path.join(os.path.dirname(__file__), '..', 'stock_list.csv')
     try: 
         tickers_df = pd.read_csv(stock_list_path)
         tickers = tickers_df['symbol'].tolist()

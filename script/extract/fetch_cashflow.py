@@ -228,7 +228,7 @@ def fetch_cashflow_data(mode='daily'):
     start_date_historical = pd.to_datetime(start_date_historical)
     
     engine = get_db_engine()
-    stock_list_path = os.path.join(os.path.dirname(__file__), "..", "..", "stock_list.csv")
+    stock_list_path = os.path.join(os.path.dirname(__file__), '..', 'stock_list.csv')
     try: 
         tickers_df = pd.read_csv(stock_list_path)
         tickers = tickers_df['symbol'].tolist()
