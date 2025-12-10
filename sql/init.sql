@@ -12,9 +12,9 @@ CREATE TABLE IF NOT EXISTS dwh.dim_time (
     day_of_year     INT NOT NULL,
     day_of_week     INT NOT NULL,        -- Monday=0 ... Sunday=6 (Python convention)
     day_name        VARCHAR(20),
-    is_weekend      BOOLEAN NOT NULL,
+    is_weekend      BOOLEAN NOT NULL,s
     is_month_start  BOOLEAN NOT NULL,
-    is_month_end    BOOLEAN NOT NULL
+    is_month_end    BOOLEAN NOT NULL,
     CONSTRAINT uq_date_key UNIQUE(date_key)
 );
 

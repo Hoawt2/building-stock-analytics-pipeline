@@ -13,7 +13,7 @@ from time import sleep
 # ============================================================
 DOTENV_PATH = '/opt/airflow/.env'
 def get_db_engine():
-    load_dotenv(DOTENV_PATH = '/opt/airflow/.env')
+    load_dotenv(DOTENV_PATH)
     
     mysql_user = os.getenv("MYSQL_USER")
     mysql_password = os.getenv("MYSQL_PASSWORD")
