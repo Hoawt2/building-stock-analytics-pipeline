@@ -2,6 +2,7 @@ import os
 import requests
 import pandas as pd
 from sqlalchemy import create_engine, text, Table, MetaData
+from sqlalchemy.dialects.mysql import insert
 from dotenv import load_dotenv
 from time import sleep
 
@@ -23,7 +24,7 @@ def get_db_engine():
 def fetch_company_info(symbol, api_key):
     url = f"https://financialmodelingprep.com/stable/profile?symbol={symbol}&apikey={api_key}"
     try: 
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, timeout=5)
         response.raise_for_status()
         try: 
             data = response.json()
@@ -114,7 +115,13 @@ def load_company_info_to_db(df, engine, symbol):
         data_to_insert = df.to_dict(orient='records')
         transaction = connection.begin()
         try: 
-            connection.execute(table.insert(), data_to_insert)
+            for row in data_to_insert:
+                stmt = insert(table).values(row)
+                upsert = stmt.on_duplicate_key_update(
+                    {col: stmt.inserted[col] for col in row.keys()}
+            )
+            connection.execute(upsert)
+
             transaction.commit()
             
             # Lấy số lượng bản ghi sau khi commit để đảm bảo tính chính xác
@@ -151,7 +158,7 @@ def fetch_company_information():
             continue
         transformed_df = transform_company_info(raw_data, symbol)
         load_company_info_to_db(transformed_df, engine, symbol)
-        sleep(15)  # Giữ khoảng cách giữa các yêu cầu để tránh bị giới hạn tốc độ
+        sleep(5)  # Giữ khoảng cách giữa các yêu cầu để tránh bị giới hạn tốc độ
 
     print("Hoàn tất quá trình fetch thông tin công ty.", flush=True)
     
