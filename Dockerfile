@@ -8,5 +8,5 @@ USER airflow
 COPY requirements.txt /requirements.txt
 
 RUN pip install --upgrade pip
-RUN pip install  -r /requirements.
+RUN pip install  -r /requirements.txt --no-cache-dir
 RUN pip install --upgrade yfinance --no-cache-dir
