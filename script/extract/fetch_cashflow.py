@@ -49,7 +49,7 @@ def get_max_fiscal_date(symbol,engine):
 def fetch_cashflow_from_api(symbol, api_key):
     url = f"https://www.alphavantage.co/query?function=CASH_FLOW&symbol={symbol}&apikey={api_key}"
     try:
-        response = requests.get(url, timeout=30)
+        response = requests.get(url, timeout=5)
         response.raise_for_status()  # Lỗi cho HTTP status codes 4xx/5xx
 
         # Thử giải mã JSON
@@ -102,6 +102,7 @@ def transform_cashflow_data(raw_data, symbol, report_type):
     df['report_type'] = report_type
     
     # Thay thế chuỗi 'nan' bằng giá trị NaN của numpy
+    pd.set_option('future.no_silent_downcasting', True)
     df.replace("nan", np.nan, inplace=True)
     
     # Loại cột 'report_type' ra khỏi danh sách cột số
@@ -269,8 +270,8 @@ def fetch_cashflow_data(mode='daily'):
         else:
             load_cashflow_to_db(engine, combined_df, symbol)
 
-        # Alpha Vantage API: 5 requests/phút -> nghỉ 15s/mã
-        sleep(15)
+        
+        sleep(5)
 
     print("\n✅ Hoàn tất quá trình fetch cash flow.")
     

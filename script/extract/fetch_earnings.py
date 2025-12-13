@@ -49,7 +49,7 @@ def get_max_fiscal_date(symbol,engine):
 def fetch_earnings_from_api(symbol, api_key):
     url = f"https://www.alphavantage.co/query?function=EARNINGS&symbol={symbol}&apikey={api_key}"
     try:
-        response = requests.get(url, timeout=150)
+        response = requests.get(url, timeout=5)
         response.raise_for_status()  # Lỗi cho HTTP status codes 4xx/5xx
 
         # Thử giải mã JSON
@@ -101,6 +101,7 @@ def transform_earnings_data(raw_data, symbol, report_type):
     df['symbol'] = symbol
     df['report_type'] = report_type
     
+    pd.set_option('future.no_silent_downcasting', True)
     df.replace("None", np.nan, inplace=True)
     df.replace("nan", np.nan, inplace=True)
     
