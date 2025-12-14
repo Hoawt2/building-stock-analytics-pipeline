@@ -59,8 +59,13 @@ def fetch_cashflow_from_api(symbol, api_key):
             print(f"[{symbol}] Lỗi: Không thể giải mã phản hồi JSON từ API.")
             print(f"Nội dung phản hồi: {response.text}")
             return {"annual": [], "quarterly": []}
-
-        # Kiểm tra xem API có trả về thông báo lỗi không
+        
+        # --- SỬA ĐỔI: Xử lý các thông báo giới hạn API ("Note") ---
+        if "Note" in data:
+            print(f"[{symbol}] ⚠️ API Limit Reached (Note): {data['Note']}")
+            return {"annual": [], "quarterly": []}
+            
+        # Kiểm tra các thông báo lỗi khác
         if "Error Message" in data:
             print(f"[{symbol}] Lỗi từ API: {data['Error Message']}")
             return {"annual": [], "quarterly": []}
@@ -74,10 +79,10 @@ def fetch_cashflow_from_api(symbol, api_key):
 
         if not annual_reports and not quarterly_reports:
             print(f"[{symbol}] Không tìm thấy báo cáo hàng năm hoặc hàng quý trong phản hồi API.")
-            print(f"Phản hồi đầy đủ: {data}")
             return {"annual": [], "quarterly": []}
 
-        return {"annual": annual_reports, "quarterly": quarterly_reports}
+        # Trả về key 'annual' và 'quarterly' để khớp với hàm main
+        return {"annual": annual_reports, "quarterly": quarterly_reports} 
 
     except requests.exceptions.Timeout:
         print(f"[{symbol}] Lỗi: Hết thời gian chờ khi gọi API.")
@@ -102,7 +107,7 @@ def transform_cashflow_data(raw_data, symbol, report_type):
     df['report_type'] = report_type
     
     # Thay thế chuỗi 'nan' bằng giá trị NaN của numpy
-    pd.set_option('future.no_silent_downcasting', True)
+    # ĐÃ XÓA DÒNG GÂY LỖI: pd.set_option('future.no_silent_downcasting', True)
     df.replace("nan", np.nan, inplace=True)
     
     # Loại cột 'report_type' ra khỏi danh sách cột số
@@ -242,12 +247,13 @@ def fetch_cashflow_data(mode='daily'):
     for symbol in tickers:
         print(f"=== [{symbol}] BẮT ĐẦU ===")
         raw_data = fetch_cashflow_from_api(symbol, api_key)
-        if not raw_data['annual'] and not raw_data['quarterly']:
-            print(f"[{symbol}] Không có dữ liệu báo cáo lưu chuyển tiền tệ. Bỏ qua.")
+        
+        # SỬA ĐỔI: Dùng .get() để tránh KeyError khi bị limit API
+        if not raw_data.get('annual') and not raw_data.get('quarterly'):
+            print(f"[{symbol}] Không có dữ liệu báo cáo lưu chuyển tiền tệ hoặc bị Limit API. Bỏ qua.")
             continue
         
         max_date = get_max_fiscal_date(symbol, engine)
-        # transform và gán report_type bên trong transform
         annual_df = transform_cashflow_data(raw_data["annual"], symbol, "annual")
         quarterly_df = transform_cashflow_data(raw_data["quarterly"], symbol, "quarterly")
         combined_df = pd.concat([annual_df, quarterly_df], ignore_index=True)
@@ -290,4 +296,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     fetch_cashflow_data(mode=args.mode)
-            

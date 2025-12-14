@@ -59,6 +59,11 @@ def fetch_balance_sheet_from_api(symbol, api_key):
             print(f"[{symbol}] Lỗi: Không thể giải mã phản hồi JSON từ API.")
             print(f"Nội dung phản hồi: {response.text}")
             return {"annual": [], "quarterly": []}
+        
+        # --- SỬA ĐỔI: Xử lý các thông báo giới hạn API ("Note") ---
+        if "Note" in data:
+            print(f"[{symbol}] ⚠️ API Limit Reached (Note): {data['Note']}")
+            return {"annual": [], "quarterly": []}
 
         # Kiểm tra xem API có trả về thông báo lỗi không
         if "Error Message" in data:
@@ -74,7 +79,7 @@ def fetch_balance_sheet_from_api(symbol, api_key):
 
         if not annual_reports and not quarterly_reports:
             print(f"[{symbol}] Không tìm thấy báo cáo hàng năm hoặc hàng quý trong phản hồi API.")
-            print(f"Phản hồi đầy đủ: {data}")
+            # print(f"Phản hồi đầy đủ: {data}") # Xóa dòng in data
             return {"annual": [], "quarterly": []}
 
         return {"annual": annual_reports, "quarterly": quarterly_reports}
@@ -101,7 +106,7 @@ def transform_balance_sheet_data(raw_data, symbol, report_type):
     df['symbol'] = symbol
     df['report_type'] = report_type
     
-    pd.set_option('future.no_silent_downcasting', True)
+    # --- ĐÃ XÓA DÒNG pd.set_option('future.no_silent_downcasting', True) GÂY LỖI ---
     df.replace("None", np.nan, inplace=True)
     df.replace("nan", np.nan, inplace=True)
     
@@ -222,8 +227,10 @@ def fetch_balance_sheet_data(mode='daily'):
     for symbol in tickers:
         print(f"=== [{symbol}] BẮT ĐẦU ===")
         raw_data = fetch_balance_sheet_from_api(symbol, api_key)
-        if not raw_data['annual'] and not raw_data['quarterly']:
-            print(f"[{symbol}] Không có dữ liệu balance sheet. Bỏ qua.")
+        
+        # SỬA ĐỔI: Dùng .get() để tránh KeyError và xử lý trường hợp API limit trả về rỗng
+        if not raw_data.get('annual') and not raw_data.get('quarterly'):
+            print(f"[{symbol}] Không có dữ liệu balance sheet hoặc bị Limit API. Bỏ qua.")
             continue
         
         max_date = get_max_fiscal_date(symbol, engine)

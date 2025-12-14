@@ -58,15 +58,20 @@ def fetch_income_statement_from_api(symbol, api_key):
         except requests.exceptions.JSONDecodeError:
             print(f"[{symbol}] Lỗi: Không thể giải mã phản hồi JSON từ API.")
             print(f"Nội dung phản hồi: {response.text}")
-            return {"annualReports": [], "quarterlyReports": []}
+            return {"annual": [], "quarterly": []}
+
+        # --- SỬA ĐỔI: Xử lý các thông báo giới hạn API ("Note") ---
+        if "Note" in data:
+            print(f"[{symbol}] ⚠️ API Limit Reached (Note): {data['Note']}")
+            return {"annual": [], "quarterly": []}
 
         # Kiểm tra xem API có trả về thông báo lỗi không
         if "Error Message" in data:
             print(f"[{symbol}] Lỗi từ API: {data['Error Message']}")
-            return {"annualReports": [], "quarterlyReports": []}
+            return {"annual": [], "quarterly": []}
         if "Information" in data:
             print(f"[{symbol}] Thông tin từ API: {data['Information']}")
-            return {"annualReports": [], "quarterlyReports": []}
+            return {"annual": [], "quarterly": []}
         
         # Kiểm tra dữ liệu báo cáo
         annual_reports = data.get("annualReports", [])
@@ -81,13 +86,13 @@ def fetch_income_statement_from_api(symbol, api_key):
 
     except requests.exceptions.Timeout:
         print(f"[{symbol}] Lỗi: Hết thời gian chờ khi gọi API.")
-        return {"annualReports": [], "quarterlyReports": []}
+        return {"annual": [], "quarterly": []}
     except requests.exceptions.RequestException as e:
         print(f"[{symbol}] Lỗi kết nối đến API: {e}")
-        return {"annualReports": [], "quarterlyReports": []}
+        return {"annual": [], "quarterly": []}
     except Exception as e:
         print(f"[{symbol}] Lỗi không xác định đã xảy ra: {e}")
-        return {"annualReports": [], "quarterlyReports": []}
+        return {"annual": [], "quarterly": []}
     
 # ============================================================ 
 # 4️⃣ CHUYỂN ĐỔI DỮ LIỆU
@@ -101,7 +106,7 @@ def transform_income_statement_data(raw_data, symbol, report_type):
     df['symbol'] = symbol
     df['report_type'] = report_type
     
-    pd.set_option('future.no_silent_downcasting', True)
+    #pd.set_option('future.no_silent_downcasting', True)
     df.replace("None", np.nan, inplace=True)
     df.replace("nan", np.nan, inplace=True)
     
@@ -210,8 +215,8 @@ def fetch_income_statement_data(mode='daily'):
     for symbol in tickers:
         print(f"=== [{symbol}] BẮT ĐẦU ===")
         raw_data = fetch_income_statement_from_api(symbol, api_key)
-        if not raw_data['annual'] and not raw_data['quarterly']:
-            print(f"[{symbol}] Không có dữ liệu income statement. Bỏ qua.")
+        if not raw_data.get('annual') and not raw_data.get('quarterly'):
+            print(f"[{symbol}] Không có dữ liệu balance sheet hoặc bị Limit API. Bỏ qua.")
             continue
         
         max_date = get_max_fiscal_date(symbol, engine)

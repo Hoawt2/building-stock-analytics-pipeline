@@ -58,15 +58,20 @@ def fetch_earnings_from_api(symbol, api_key):
         except requests.exceptions.JSONDecodeError:
             print(f"[{symbol}] Lỗi: Không thể giải mã phản hồi JSON từ API.")
             print(f"Nội dung phản hồi: {response.text}")
-            return {"annualEarnings": [], "quarterlyEarnings": []}
+            return {"annual": [], "quarterly": []}
 
-        # Kiểm tra xem API có trả về thông báo lỗi không
+        # --- Xử lý các thông báo giới hạn API ---
+        if "Note" in data:
+            print(f"[{symbol}] ⚠️ API Limit Reached (Note): {data['Note']}")
+            return {"annual": [], "quarterly": []}
+            
         if "Error Message" in data:
             print(f"[{symbol}] Lỗi từ API: {data['Error Message']}")
-            return {"annualEarnings": [], "quarterlyEarnings": []}
+            return {"annual": [], "quarterly": []}
+            
         if "Information" in data:
             print(f"[{symbol}] Thông tin từ API: {data['Information']}")
-            return {"annualEarnings": [], "quarterlyEarnings": []}
+            return {"annual": [], "quarterly": []}
         
         # Kiểm tra dữ liệu báo cáo
         annual_reports = data.get("annualEarnings", [])
@@ -74,20 +79,19 @@ def fetch_earnings_from_api(symbol, api_key):
 
         if not annual_reports and not quarterly_reports:
             print(f"[{symbol}] Không tìm thấy báo cáo hàng năm hoặc hàng quý trong phản hồi API.")
-            print(f"Phản hồi đầy đủ: {data}")
-            return {"annualEarnings": [], "quarterlyEarnings": []}
+            return {"annual": [], "quarterly": []}
 
         return {"annual": annual_reports, "quarterly": quarterly_reports}
 
     except requests.exceptions.Timeout:
         print(f"[{symbol}] Lỗi: Hết thời gian chờ khi gọi API.")
-        return {"annualEarnings": [], "quarterlyEarnings": []}
+        return {"annual": [], "quarterly": []}
     except requests.exceptions.RequestException as e:
         print(f"[{symbol}] Lỗi kết nối đến API: {e}")
-        return {"annualEarnings": [], "quarterlyEarnings": []}
+        return {"annual": [], "quarterly": []}
     except Exception as e:
         print(f"[{symbol}] Lỗi không xác định đã xảy ra: {e}")
-        return {"annualEarnings": [], "quarterlyEarnings": []}
+        return {"annual": [], "quarterly": []}
     
 # ============================================================ 
 # 4️⃣ CHUYỂN ĐỔI DỮ LIỆU
@@ -101,7 +105,8 @@ def transform_earnings_data(raw_data, symbol, report_type):
     df['symbol'] = symbol
     df['report_type'] = report_type
     
-    pd.set_option('future.no_silent_downcasting', True)
+    # --- ĐÃ XÓA DÒNG pd.set_option GÂY LỖI ---
+    
     df.replace("None", np.nan, inplace=True)
     df.replace("nan", np.nan, inplace=True)
     
@@ -200,14 +205,20 @@ def fetch_earnings_data(mode='daily'):
     for symbol in tickers:
         print(f"=== [{symbol}] BẮT ĐẦU ===")
         raw_data = fetch_earnings_from_api(symbol, api_key)
-        if not raw_data['annual'] and not raw_data['quarterly']:
-            print(f"[{symbol}] Không có dữ liệu earnings. Bỏ qua.")
+        
+        if not raw_data.get('annual') and not raw_data.get('quarterly'):
+            print(f"[{symbol}] Không có dữ liệu earnings hoặc bị Limit API. Bỏ qua.")
             continue
         
         max_date = get_max_fiscal_date(symbol, engine)
-        annual_df = transform_earnings_data(raw_data["annual"], symbol, "annual")
-        quarterly_df = transform_earnings_data(raw_data["quarterly"], symbol, "quarterly")
+        annual_df = transform_earnings_data(raw_data.get("annual", []), symbol, "annual")
+        quarterly_df = transform_earnings_data(raw_data.get("quarterly", []), symbol, "quarterly")
         combined_df = pd.concat([annual_df, quarterly_df], ignore_index=True)
+        
+        if combined_df.empty:
+             print(f"[{symbol}] Dữ liệu rỗng sau khi transform. Bỏ qua.")
+             continue
+
         combined_df = combined_df[combined_df["fiscal_date_ending"].notna()]
         
         if mode == "historical":
