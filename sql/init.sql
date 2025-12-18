@@ -66,10 +66,10 @@ CREATE TABLE IF NOT EXISTS dwh.dim_company_informations (
     state                VARCHAR(50),
     zip                  VARCHAR(20),
     ipo_date             DATE,                   
-    is_etf               BIGINT USING is_etf::INT,
-    is_fund              BIGINT USING is_fund::INT,
-    is_adr               BIGINT USING is_adr::INT,
-    is_actively_trading  BIGINT USING is_actively_trading::INT,
+    is_etf               BIGINT,
+    is_fund              BIGINT,
+    is_adr               BIGINT,
+    is_actively_trading  BIGINT,
     --SCD TYPE 2 COLUMNS (Các cột quản lý Lịch sử thay đổi)
     valid_from_date      DATE NOT NULL,         
     valid_to_date        DATE,                   
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS dwh.dim_company_informations (
     -- 5. AUDIT COLUMN (Cột Kiểm toán)
     dw_load_timestamp    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     -- Hạn chế (Constraints)
-    CONSTRAINT uq_ticker_valid_from UNIQUE (ticker, valid_from_date)
+    CONSTRAINT uq_ticker_valid_from UNIQUE (symbol, valid_from_date)
 );
 
 

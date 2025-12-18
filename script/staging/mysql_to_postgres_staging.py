@@ -13,6 +13,7 @@ TABLE_CONFIG = {
     'alphavantage_income_statement': 'fiscal_date_ending',
     'alphavantage_earnings': 'fiscal_date_ending',
     'fmp_company_market_cap': 'date',
+    'fmp_company_information': 'id',
 }
 SQL_DEFINITIONS_FILE = '/opt/airflow/sql/extract_db.sql'
 
@@ -69,53 +70,52 @@ def main():
             with mysql_engine.connect() as mysql_conn:
                 
                 # HISTORICAL MODE: Always do a full replace.
-                if args.mode == 'historical':
+                if args.mode == 'historical'or table not in TABLE_CONFIG:
                     print(f"Historical mode: Replacing all data in {pg_table}.")
-                    # Thay mysql_engine bằng mysql_conn
-                    df = pd.read_sql_table(table, mysql_conn) 
-                    df.to_sql(pg_table, pg_engine, if_exists='replace', index=False)
-                    print(f"Successfully replaced {len(df)} rows.")
-                    continue
-
-                # INCREMENTAL MODE:
-                if table not in TABLE_CONFIG:
-                    print(f"Info: No incremental config for '{table}'. Performing full replacement.")
-                    # Thay mysql_engine bằng mysql_conn
                     df = pd.read_sql_table(table, mysql_conn)
-                    df.to_sql(pg_table, pg_engine, if_exists='replace', index=False)
-                    print(f"Successfully replaced {len(df)} rows.")
-                    continue
-
-                date_col = TABLE_CONFIG[table]
+                    if not df.empty:
+                        # Bước 2: Dùng giao dịch (transaction) để xóa và nạp lại
+                        with pg_engine.begin() as pg_conn:
+                            print(f"Truncating table {pg_table}...")
+                            pg_conn.execute(text(f'TRUNCATE TABLE "{pg_table}" CASCADE'))
+            
+                            # Dùng append để giữ nguyên cấu trúc BIGINT bạn đã tạo ở file init.sql
+                            df.to_sql(pg_table, pg_conn, if_exists='append', index=False)
+            
+                        print(f"Successfully refreshed {len(df)} rows.")
+                    else:
+                        print(f"Source table {table} is empty. Skipping refresh.")
                 
-                # Find the most recent date in the destination table
-                max_date = None
-                try:
-                    with pg_engine.connect() as pg_conn:
-                        max_date = pg_conn.execute(text(f'SELECT MAX("{date_col}") FROM "{pg_table}"')).scalar()
-                except Exception:
-                    print(f"Info: Destination table {pg_table} likely doesn't exist. Will perform a full load.")
-
-                # Fetch only newer records from the source
-                if max_date:
-                    print(f"Found latest date in destination: {max_date}. Fetching newer records.")
-                    query = text(f"SELECT * FROM `{table}` WHERE `{date_col}` > :max_date")
-                    # Sử dụng params an toàn hơn, hoặc format string như cũ nếu muốn
-                    # Ở đây để đơn giản giữ nguyên logic format string của bạn nhưng cần cẩn thận SQL Injection
-                    query_str = f"SELECT * FROM `{table}` WHERE `{date_col}` > '{max_date}'"
-                else:
-                    print("No existing data found in destination. Fetching all records.")
-                    query_str = f"SELECT * FROM `{table}`"
                 
-                # Thay mysql_engine bằng mysql_conn
-                df_new = pd.read_sql(query_str, mysql_conn)
-
-                if not df_new.empty:
-                    print(f"Found {len(df_new)} new rows to append.")
-                    df_new.to_sql(pg_table, pg_engine, if_exists='append', index=False)
                 else:
-                    print("No new data to append.")
+                    date_col = TABLE_CONFIG[table]
+                    # Find the most recent date in the destination table
+                    max_date = None
+                    try:
+                        with pg_engine.connect() as pg_conn:
+                            max_date = pg_conn.execute(text(f'SELECT MAX("{date_col}") FROM "{pg_table}"')).scalar()
+                    except Exception:
+                        print(f"Info: Destination table {pg_table} likely doesn't exist. Will perform a full load.")
 
+                    # Fetch only newer records from the source
+                    if max_date:
+                        print(f"Found latest date in destination: {max_date}. Fetching newer records.")
+                        query = text(f"SELECT * FROM `{table}` WHERE `{date_col}` > :max_date")
+                        # Sử dụng params an toàn hơn, hoặc format string như cũ nếu muốn
+                        # Ở đây để đơn giản giữ nguyên logic format string của bạn nhưng cần cẩn thận SQL Injection
+                        query_str = f"SELECT * FROM `{table}` WHERE `{date_col}` > '{max_date}'"
+                    else:
+                        print("No existing data found in destination. Fetching all records.")
+                        query_str = f"SELECT * FROM `{table}`"
+                    
+                    # Thay mysql_engine bằng mysql_conn
+                    df_new = pd.read_sql(query_str, mysql_conn)
+
+                    if not df_new.empty:
+                        print(f"Found {len(df_new)} new rows to append.")
+                        df_new.to_sql(pg_table, pg_engine, if_exists='append', index=False)
+                    else:
+                        print("No new data to append.")
         except Exception as e:
             print(f"ERROR processing {table}: {e}")
             overall_success = False
