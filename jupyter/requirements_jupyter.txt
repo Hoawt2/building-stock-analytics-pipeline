@@ -1,0 +1,10 @@
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+keras
+tensorflow
+psycopg2-binary
+SQLAlchemy
+python-dotenv==1.0.1

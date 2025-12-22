@@ -221,11 +221,22 @@ services:
       - bash
       - -c
       - airflow
-
-
-  # You can enable flower by adding "--profile flower" option e.g. docker-compose --profile flower up
-  # or by explicitly targeted on the command line e.g. docker-compose up flower.
-  # See: https://docs.docker.com/compose/profiles/
+  jupyter_lab:
+  
+      build:
+        context: .
+        dockerfile: ./jupyter/Dockerfile.jupyter
+      container_name: jupyter_workspace
+      ports:
+        - "8888:8888"
+      volumes:
+        - ./jupyter/notebooks:/app/notebooks
+        - ./jupyter/data:/app/data
+      environment:
+        - JUPYTER_ENABLE_LAB=yes
+      restart: always
+      networks:
+      - data_network
 
   mysql:
     image: mysql:8.0
