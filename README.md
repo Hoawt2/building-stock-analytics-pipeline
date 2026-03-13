@@ -15,53 +15,78 @@ This project implements a complete **data engineering pipeline** that fetches, s
 The system is designed with a multi-layer architecture to ensure modularity, scalability, and ease of maintenance.
 
 ```mermaid
-graph TD;
-    subgraph A[Data Sources]
+flowchart TD
+    %% Colors and Styling
+    classDef source fill:#f9f9f9,stroke:#333,stroke-width:2px;
+    classDef landing fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef staging fill:#ede7f6,stroke:#512da8,stroke-width:2px;
+    classDef dwh fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
+    classDef orchestrator fill:#fff3e0,stroke:#e65100,stroke-width:2px,stroke-dasharray: 5 5;
+
+    %% Orchestration
+    subgraph Orchestration["⚙️ Orchestration (Docker)"]
+        Airflow["Apache Airflow"]
+    end
+    class Orchestration orchestrator
+
+    %% Data Sources
+    subgraph Sources["🌐 External Data Sources"]
         direction LR
-        API_FMP[Financial Modeling Prep API]
-        API_YF[YFinance]
+        YF["YFinance API"]
+        FMP["Financial Modeling Prep API"]
     end
+    class Sources source
 
-    subgraph B[Landing / Raw Layer - MySQL]
+    %% Landing Layer
+    subgraph Landing["📥 Landing / Raw Layer (MySQL)"]
+        direction TB
+        DB_Extract[("extract_db")]
+        raw_yf["raw_yfinance"]
+        raw_alpha["alphavantage_* tables"]
+        raw_fmp["fmp_* tables"]
+        
+        DB_Extract --- raw_yf & raw_alpha & raw_fmp
+    end
+    class Landing landing
+
+    %% Staging & DWH Layer
+    subgraph Postgres["🐘 Staging & DWH (PostgreSQL)"]
         direction LR
-        T1[raw_yfinance]
-        T2[alphavantage_...]
-        T3[fmp_...]
-    end
-
-    subgraph C[Staging & DWH Layer - PostgreSQL]
-        subgraph C1[Staging Schema]
+        
+        subgraph Staging["🔄 Staging Schema"]
             direction TB
-            ST1[staging.yfinance]
-            ST2[staging.market_cap]
-            ST3[staging.company_info]
-            ST4[staging.financial_reports]
+            stg_yf["staging.yfinance"]
+            stg_mc["staging.market_cap"]
+            stg_ci["staging.company_info"]
+            stg_fr["staging.financial_reports"]
         end
-        subgraph C2[DWH Schema - Star Schema]
+        
+        subgraph DWH["📊 Data Warehouse (Star Schema)"]
             direction TB
-            D1[dim_company_informations]
-            D2[dim_time]
-            F1[fact_history_stock]
-            F2[fact_market_cap]
-            F3[fact_financials]
+            dim_co["dim_company_informations (SCD2)"]
+            dim_time["dim_time"]
+            fact_hs["fact_history_stock"]
+            fact_mc["fact_market_cap"]
+            fact_fin["fact_financials"]
         end
     end
+    class Postgres staging
+    class Staging staging
+    class DWH dwh
 
-    subgraph D[Orchestration]
-        Airflow[Apache Airflow]
-    end
+    %% Data Flow
+    YF -- "Python Fetch Scripts\n(Daily/Rotational)" --> DB_Extract
+    FMP -- "Python Fetch Scripts\n(Daily/Rotational)" --> DB_Extract
+    
+    DB_Extract -- "Incremental Load\n(Pandas/SQLAlchemy)" --> Staging
+    
+    Staging -- "Data Transformation" --> DWH
 
-    API_FMP -- "Fetch Scripts" --> B;
-    API_YF -- "Fetch Scripts" --> B;
-    B -- "Staging Script" --> C1;
-    C1 -- "Transform Scripts" --> C2;
-    D -- "Orchestrates Tasks" --> API_FMP;
-    D -- "Orchestrates Tasks" --> API_YF;
-    D -- "Orchestrates Tasks" --> B;
-    D -- "Orchestrates Tasks" --> C1;
-    D -- "Orchestrates Tasks" --> C2;
+    %% Orchestration Links
+    Airflow -. "Schedules & Triggers\ngroup_fetch_*" .-> Sources
+    Airflow -. "Triggers\ngroup_staging" .-> Landing
+    Airflow -. "Triggers\ngroup_transform" .-> Postgres
 ```
-<img width="951" height="321" alt="Building-DW-with-Airflow-Python-for-IMDB drawio" src="https://github.com/user-attachments/assets/73bc0751-3e54-4c5d-be02-c34ea029f6f2" />
 
 | Layer | Description | Technology | Database |
 | :--- | :--- | :--- | :--- |
