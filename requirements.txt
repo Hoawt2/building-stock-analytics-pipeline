@@ -21,3 +21,7 @@ frozendict==2.4.6
 multitasking==0.0.11
 pymysql
 python-dotenv==1.0.1
+
+# MinIO(S3)
+s3fs==2024.2.0
+boto3==1.34.60

@@ -1,120 +1,84 @@
 import os
 import argparse
 import requests
-import pandas as pd
-import numpy as np
-from sqlalchemy import create_engine, text, Table, MetaData
-from dotenv import load_dotenv
-from datetime import datetime, timedelta
-from time import sleep
+import pandas as pd     
+import numpy as np 
+from dotenv import load_dotenv 
+from datetime import datetime 
+from time import sleep 
 
-# ============================================================ 
-# 1️⃣ TẠO ENGINE KẾT NỐI DATABASE
-# ============================================================ 
-DOTENV_PATH = '/opt/airflow/.env'
-def get_db_engine():
-    load_dotenv(DOTENV_PATH)
-    
-    mysql_user = os.getenv("MYSQL_USER")
-    mysql_password = os.getenv("MYSQL_PASSWORD")
-    mysql_db = os.getenv("MYSQL_DATABASE")
-    mysql_host = os.getenv("MYSQL_HOST")
-    mysql_port = os.getenv("MYSQL_PORT")
-    
-    if not all([mysql_user, mysql_password, mysql_db, mysql_host, mysql_port]):
-        raise ValueError("Thiếu hoặc sai thông tin kết nối database trong file .env")
-    
-    connection_string = f"mysql+pymysql://{mysql_user}:{mysql_password}@{mysql_host}:{mysql_port}/{mysql_db}"
-    engine = create_engine(connection_string)
-    return engine 
+# Cấu hình kết nối MINIO 
+load_dotenv()
+MINIO_ENDPOINT = os.getenv('MINIO_ENDPOINT', "http://localhost:9000")  # Nếu chạy trong docker thì là http://minio:9000
+MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY', "minioadmin")
+MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY', "minioadmin")
+BUCKET_NAME = os.getenv('MINIO_BUCKET_NAME', "stock-data")
+# Đường dẫn ảo S3 tới file Parquet
+S3_FILE_PATH = f"s3://{BUCKET_NAME}/raw_parquet/alphavantage_balance_sheet.parquet"
+# Cấu hình "chìa khoá" để Pandas biết đường mở cửa MinIO
+STORAGE_OPTIONS = {
+    "key": MINIO_ACCESS_KEY,
+    "secret": MINIO_SECRET_KEY,
+    "client_kwargs": {"endpoint_url": MINIO_ENDPOINT}
+}
 
-# ============================================================ 
-# 2️⃣ HÀM LẤY NGÀY GẦN NHẤT TRONG DB
-# ============================================================ 
+def get_max_fiscal_date(symbol): 
+    """
+    Lấy ngày báo cáo gần nhất từ file Parquet
+    """
+    try: 
+        df = pd.read_parquet(S3_FILE_PATH, columns=['symbol', 'fiscal_date_ending'], storage_options=STORAGE_OPTIONS)
+        df_symbol = df[df['symbol'] == symbol]
+        
+        if not df_symbol.empty: 
+            max_date = df_symbol['fiscal_date_ending'].max()
+            return pd.to_datetime(max_date)
+    except Exception as e: 
+        print(f'Lỗi khi đọc file Parquet để tìm max date cho {symbol}: {e}')
+    return None
 
-def get_max_fiscal_date(symbol,engine):
-    try:
-        with engine.connect() as connection:
-            query = text("SELECT MAX(fiscal_date_ending) FROM alphavantage_balance_sheet WHERE symbol = :symbol")
-            result = connection.execute(query, {"symbol": symbol}).scalar()
-            return pd.to_datetime(result) if result else None
-    except Exception as e:
-        print(f"Lỗi khi truy vẫn ngày gần nhất cho mã {symbol}: {e}")
-        return None
-    
-# ============================================================ 
-# 3️⃣ GỌI API ALPHAVANTAGE
-# ============================================================ 
-
+# Gọi API 
 def fetch_balance_sheet_from_api(symbol, api_key):
     url = f"https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol={symbol}&apikey={api_key}"
-    try:
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()  # Lỗi cho HTTP status codes 4xx/5xx
+    try: 
+        response = requests.get(url, timeout=15)
+        response.raise_for_status()
 
-        # Thử giải mã JSON
-        try:
+        try: 
             data = response.json()
-        except requests.exceptions.JSONDecodeError:
-            print(f"[{symbol}] Lỗi: Không thể giải mã phản hồi JSON từ API.")
-            print(f"Nội dung phản hồi: {response.text}")
+        except requests.exceptions.JSONDecodeError: 
+            print(f"[{symbol}] Lỗi không thể giải mã JSON.")
             return {"annual": [], "quarterly": []}
         
-        # --- SỬA ĐỔI: Xử lý các thông báo giới hạn API ("Note") ---
-        if "Note" in data:
-            print(f"[{symbol}] ⚠️ API Limit Reached (Note): {data['Note']}")
+        if "Note" in data: 
+            print(f"[{symbol}]  Limit API: {data['Note']}")
             return {"annual": [], "quarterly": []}
-
-        # Kiểm tra xem API có trả về thông báo lỗi không
         if "Error Message" in data:
-            print(f"[{symbol}] Lỗi từ API: {data['Error Message']}")
             return {"annual": [], "quarterly": []}
         if "Information" in data:
-            print(f"[{symbol}] Thông tin từ API: {data['Information']}")
             return {"annual": [], "quarterly": []}
         
-        # Kiểm tra dữ liệu báo cáo
         annual_reports = data.get("annualReports", [])
         quarterly_reports = data.get("quarterlyReports", [])
 
-        if not annual_reports and not quarterly_reports:
-            print(f"[{symbol}] Không tìm thấy báo cáo hàng năm hoặc hàng quý trong phản hồi API.")
-            # print(f"Phản hồi đầy đủ: {data}") # Xóa dòng in data
-            return {"annual": [], "quarterly": []}
-
         return {"annual": annual_reports, "quarterly": quarterly_reports}
-
-    except requests.exceptions.Timeout:
-        print(f"[{symbol}] Lỗi: Hết thời gian chờ khi gọi API.")
-        return {"annual": [], "quarterly": []}
-    except requests.exceptions.RequestException as e:
-        print(f"[{symbol}] Lỗi kết nối đến API: {e}")
-        return {"annual": [], "quarterly": []}
-    except Exception as e:
-        print(f"[{symbol}] Lỗi không xác định đã xảy ra: {e}")
-        return {"annual": [], "quarterly": []}
     
-# ============================================================ 
-# 4️⃣ CHUYỂN ĐỔI DỮ LIỆU
-# ============================================================ 
+    except Exception as e: 
+        print(f"[{symbol}] Lỗi khi gọi API: {e}")
+        return {"annual": [], "quarterly": []}
 
-def transform_balance_sheet_data(raw_data, symbol, report_type):
-    if not raw_data:
+# Biến đổi dữ liệu 
+def transform_balance_sheet_data(raw_data, symbol, report_type): 
+    if not raw_data: 
         return pd.DataFrame()
     
     df = pd.DataFrame(raw_data)
     df['symbol'] = symbol
     df['report_type'] = report_type
-    
-    # --- ĐÃ XÓA DÒNG pd.set_option('future.no_silent_downcasting', True) GÂY LỖI ---
-    df.replace("None", np.nan, inplace=True)
-    df.replace("nan", np.nan, inplace=True)
-    
+    df.replace(["None", "nan"], None)
     numeric_cols = df.columns.difference(['fiscalDateEnding', 'reportedCurrency', 'symbol', 'report_type'])
     df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric, errors='coerce')
 
-    df = df.replace({np.nan: None})
-    
     column_mapping = {
         'fiscalDateEnding': 'fiscal_date_ending',
         'reportedCurrency': 'reported_currency',
@@ -155,119 +119,82 @@ def transform_balance_sheet_data(raw_data, symbol, report_type):
         'commonStock': 'common_stock',
         'commonStockSharesOutstanding': 'common_stock_shares_outstanding'
     }
-    
+
     df.rename(columns=column_mapping, inplace=True)
-    df['fiscal_date_ending'] = pd.to_datetime(df['fiscal_date_ending'])
-    
-    df.drop_duplicates(subset=['fiscal_date_ending', 'report_type'], keep='first', inplace=True)
-    
+    if 'fiscal_date_ending' in df.columns:
+        df['fiscal_date_ending'] = pd.to_datetime(df['fiscal_date_ending'])
+        df.drop_duplicates(subset=['fiscal_date_ending', 'report_type'], keep='first', inplace=True)
+        
     ordered_cols = list(column_mapping.values()) + ['symbol', 'report_type']
     df = df[[c for c in ordered_cols if c in df.columns]]
     return df
 
-# ============================================================ 
-# 5️⃣ GHI DỮ LIỆU VÀO DATABASE
-# ============================================================ 
-def load_balance_sheet_to_db(engine, df, symbol):
-    print(f"[{symbol}] Chuẩn bị ghi {len(df)} bản ghi vào DB.", flush=True)
-    if df.empty:
-        print(f"[{symbol}] Không có dữ liệu để ghi.", flush=True)
-        return
-    
-    from sqlalchemy.dialects.mysql import insert as mysql_insert
-
-    with engine.connect() as connection:
-        metadata = MetaData()
-        table = Table('alphavantage_balance_sheet', metadata, autoload_with=engine)
-        data_to_insert = df.to_dict(orient='records')
-
-        insert_stmt = mysql_insert(table).values(data_to_insert)
-
-        update_columns = {
-            col: insert_stmt.inserted[col] for col in df.columns if col not in ['symbol', 'fiscal_date_ending', 'report_type', 'id']
-        }
-
-        upsert_stmt = insert_stmt.on_duplicate_key_update(**update_columns)
-        
-        transaction = connection.begin()
-        try:
-            connection.execute(upsert_stmt)
-            transaction.commit()
-            
-            query = text("SELECT COUNT(*) FROM alphavantage_balance_sheet WHERE symbol = :symbol")
-            count = connection.execute(query, {"symbol": symbol}).scalar()
-            print(f"[{symbol}] ✅ Đã ghi thành công và/hoặc cập nhật {len(data_to_insert)} bản ghi. Tổng số bản ghi cho mã này: {count}.", flush=True)
-            
-        except Exception as e:
-            print(f"[{symbol}] ❌ Lỗi khi ghi dữ liệu vào DB: {e}", flush=True)
-            transaction.rollback()
-            
-# ============================================================ 
-# 6️⃣ HÀM MAIN
-# ============================================================ 
+# Lưu dữ liệu vào PARQUET
 def fetch_balance_sheet_data(mode='daily'):
-    load_dotenv(".env")
     api_key = os.getenv("ALPHAVANTAGE_API_KEY")
-    if not api_key:
-        raise ValueError("API key cho AlphaVantage không được tìm thấy trong file .env")
-    start_date_historical = os.getenv("START_DATE", "2015-01-01")
-    start_date_historical = pd.to_datetime(start_date_historical)
-    
-    engine = get_db_engine()
+    start_date_historical = pd.to_datetime(os.getenv("START_DATE", "2015-01-01"))
     stock_list_path = os.path.join(os.path.dirname(__file__), '..', 'stock_list.csv')
+
     try: 
         tickers_df = pd.read_csv(stock_list_path)
         tickers = tickers_df['symbol'].tolist()
     except FileNotFoundError:
-        print(f"Lỗi: Không tìm thấy file stock_list.csv tại '{stock_list_path}'")
+        print(f"Lỗi: Không tìm thấy file {stock_list_path}")
         return
     
-    print(f"Bắt đầu fetch dữ liệu balance sheet cho các mã: {tickers}")
+    print(f"Bắt đầu fetch dữ liệu Balance Sheet cho: {tickers}")
     
+    all_new_data = [] # Chứa các DataFrame báo cáo mới thu thập được
     for symbol in tickers:
-        print(f"=== [{symbol}] BẮT ĐẦU ===")
+        print(f"--- [{symbol}] ---")
         raw_data = fetch_balance_sheet_from_api(symbol, api_key)
         
-        # SỬA ĐỔI: Dùng .get() để tránh KeyError và xử lý trường hợp API limit trả về rỗng
         if not raw_data.get('annual') and not raw_data.get('quarterly'):
-            print(f"[{symbol}] Không có dữ liệu balance sheet hoặc bị Limit API. Bỏ qua.")
+            print(f"[{symbol}] Rỗng hoặc Limit API. Bỏ qua.")
+            sleep(2) # Tránh spam API dồn dập
             continue
-        
-        max_date = get_max_fiscal_date(symbol, engine)
-        annual_df = transform_balance_sheet_data(raw_data["annual"], symbol, "annual")
-        quarterly_df = transform_balance_sheet_data(raw_data["quarterly"], symbol, "quarterly")
-        combined_df = pd.concat([annual_df, quarterly_df], ignore_index=True)
-        combined_df = combined_df[combined_df["fiscal_date_ending"].notna()]
-        
-        if mode == "historical":
-            combined_df = combined_df[combined_df["fiscal_date_ending"] >= start_date_historical]
-            print(f"[{symbol}] historical: giữ báo cáo từ {start_date_historical} trở về sau. Số bản ghi sau lọc: {len(combined_df)}")
-        else:  # mode == "daily"
-            if max_date is not None:
-                combined_df = combined_df[combined_df["fiscal_date_ending"] > max_date]
-                print(f"[{symbol}] daily: giữ báo cáo mới hơn {max_date.date()}. Số bản ghi sau lọc: {len(combined_df)}")
-
-        if combined_df.empty:
-            print(f"[{symbol}] ❗ Sau khi lọc không còn bản ghi để ghi. Bỏ qua.")
-        else:
-            load_balance_sheet_to_db(engine, combined_df, symbol)
-
-        sleep(5)
-
-    print("\n✅ Hoàn tất quá trình fetch balance sheet.")
     
-# ============================================================ 
-# 7️⃣ CHẠY TỪ DÒNG LỆNH
-# ============================================================ 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Fetch balance sheet data from Alpha Vantage API.")
-    parser.add_argument(
-        "--mode",
-        type=str,
-        default="daily",
-        choices=["daily", "historical"],
-        help="Chế độ fetch: 'daily' chỉ lấy dữ liệu mới hơn trong DB, 'historical' lấy toàn bộ lịch sử."
-    )
-    args = parser.parse_args()
+        max_date = get_max_fiscal_date(symbol)
+        
+        annual_df = transform_balance_sheet_data(raw_data.get("annual", []), symbol, "annual")
+        quarterly_df = transform_balance_sheet_data(raw_data.get("quarterly", []), symbol, "quarterly")
+        combined_df = pd.concat([annual_df, quarterly_df], ignore_index=True)
 
+        if not combined_df.empty and "fiscal_date_ending" in combined_df.columns:
+            combined_df = combined_df[combined_df["fiscal_date_ending"].notna()]
+            
+            if mode == "historical":
+                combined_df = combined_df[combined_df["fiscal_date_ending"] >= start_date_historical]
+            elif mode == "daily" and max_date is not None:
+                combined_df = combined_df[combined_df["fiscal_date_ending"] > max_date]
+            if not combined_df.empty:
+                print(f"[{symbol}] Có {len(combined_df)} báo cáo mới!")
+                all_new_data.append(combined_df)
+            else:
+                print(f"[{symbol}] Dữ liệu đã up-to-date.")
+                
+            sleep(5) # AlphaVantage giới hạn 5 API calls / phút cho bản free
+    # Xử lý nghiền tất cả vào file Parquet
+    if all_new_data:
+        new_df = pd.concat(all_new_data, ignore_index=True)
+        
+        try:
+            print("Đang gộp báo cáo tài chính mới vào file Parquet cũ...")
+            old_df = pd.read_parquet(S3_FILE_PATH, storage_options=STORAGE_OPTIONS)
+            final_df = pd.concat([old_df, new_df], ignore_index=True)
+            # Khử trùng lặp trên bộ khoá (ngày báo cáo + mã + loại)
+            final_df.drop_duplicates(subset=['symbol', 'fiscal_date_ending', 'report_type'], keep='last', inplace=True)
+        except Exception:
+            print("Không thấy file cũ trên MinIO. Tạo file Parquet mới tinh!")
+            final_df = new_df
+        
+        final_df['load_timestamp'] = pd.Timestamp.now()
+        final_df.to_parquet(S3_FILE_PATH, index=False, storage_options=STORAGE_OPTIONS)
+        print(f"Hoàn tất! Đã lưu tổng cộng {len(final_df)} báo cáo vào Data Lake (Parquet).")
+    else:
+        print("Không có dữ liệu Balance Sheet mới nào trên toàn thị trường cần tải.")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode", type=str, default="daily", choices=["daily", "historical"])
+    args = parser.parse_args()
     fetch_balance_sheet_data(mode=args.mode)
