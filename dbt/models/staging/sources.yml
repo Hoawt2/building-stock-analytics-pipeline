@@ -1,0 +1,13 @@
+version: 2 
+
+sources: 
+  - name: de_postgres # Đặt tên định danh nội bộ cho source
+    database: de_psql
+    schema: raw # Nơi chứa data đã dội từ Python xuống ở Phase 1
+    tables: 
+      - name: raw_balance_sheet
+      - name: raw_cashflow
+      - name: raw_income_statement
+      - name: raw_earnings
+      - name: raw_company_information
+      - name: raw_yfinance

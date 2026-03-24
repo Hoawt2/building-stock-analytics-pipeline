@@ -1,0 +1,12 @@
+warehouse:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: de_psql  # Trỏ đúng vào tên container Postgres trong docker-compose
+      user: admin
+      password: admin
+      port: 5432
+      dbname: de_psql
+      schema: public
+      threads: 4     # Cho phép dbt chạy 4 luồng song song để tăng tốc

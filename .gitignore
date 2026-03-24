@@ -6,3 +6,5 @@ logs/
 MENTOR.md
 /jupyter
 /doc
+/.agents
+skills-lock.json

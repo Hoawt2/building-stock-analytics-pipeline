@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: dim_company
+    description: "Bảng Dimension tra cứu lịch sử công ty (SCD Type 2)"
+    columns:
+      - name: company_key
+        description: "Khóa chính lịch sử sinh từ dbt snapshots"
+        tests:
+          - unique
+          - not_null
+      - name: symbol
+        tests:
+          - not_null
+  
+  - name: fact_stock_price
+    description: "Bảng Fact lưu biến động giá hàng ngày T0"
+    columns:
+      - name: stock_price_id
+        tests:
+          - unique
+          - not_null
+      - name: company_key
+        tests:
+          - not_null
+          # Bài test quyền lực nhất dbt: Đảm bảo FK map 1-N với bảng Dim (Cấm sự mồ côi data)
+          - relationships:
+              to: ref('dim_company')
+              field: company_key
+      - name: close_price
+        tests:
+          - not_null
+          
+  - name: dim_date
+    description: "Bảng kích thước 30 năm lưu thời gian"
+    columns:
+      - name: date_key
+        tests:
+          - unique
+          - not_null

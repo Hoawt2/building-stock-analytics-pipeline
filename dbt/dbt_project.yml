@@ -1,0 +1,28 @@
+name: 'warehouse'
+version: '1.0.0'
+config-version: 2
+profile: 'warehouse'
+
+# Chỉ định cho dbt biết các thành phần nằm ở thư mục nào
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+analysis-paths: ["analyses"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  warehouse:
+    staging:
+      +schema: staging
+      +materialized: view  
+    core:
+      +schema: core
+      +materialized: table
+    marts:
+      +schema: marts
+      +materialized: table

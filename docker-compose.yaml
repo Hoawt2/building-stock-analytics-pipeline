@@ -20,7 +20,8 @@ x-airflow-common:
     - ./script:/opt/airflow/script
     - ./sql:/opt/airflow/sql
     - ./.env:/opt/airflow/.env
-    # - ./data:/opt/airflow/data
+    - ./dbt:/opt/airflow/dbt
+    - /var/run/docker.sock:/var/run/docker.sock
   networks:
     - data_network
   env_file: .env
@@ -170,6 +171,19 @@ services:
     env_file: .env
     networks:
       - data_network 
+
+  dbt:
+    image: ghcr.io/dbt-labs/dbt-postgres:1.7.latest  # Dùng official image chuyên cho Postgres
+    container_name: dbt_core
+    depends_on:
+      - de_psql  
+    volumes:
+      - ./dbt:/usr/app  # Mount thư mục code dbt của ta vào container
+      - ./dbt/profiles.yml:/root/.dbt/profiles.yml  # Mount thông tin đăng nhập database
+    networks:
+      - data_network
+    working_dir: /usr/app
+    entrypoint: ["dbt"]  # Đặt entrypoint sẵn để gọi lệnh sẽ ngắn gọn hơn
 
 networks:
   data_network:

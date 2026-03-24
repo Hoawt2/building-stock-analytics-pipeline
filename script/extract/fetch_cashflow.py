@@ -7,32 +7,41 @@ from dotenv import load_dotenv
 from datetime import datetime 
 from time import sleep 
 
-# Cấu hình thư mục lưu Parquet 
-PARQUET_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'raw_parquet')
-FILE_NAME = 'alphavantage_cash_flow.parquet'
-FILE_PATH = os.path.join(PARQUET_DIR, FILE_NAME)
+# Cấu hình kết nối MINIO 
+load_dotenv()
+MINIO_ENDPOINT = os.getenv('MINIO_ENDPOINT', "http://localhost:9000")  # Nếu chạy trong docker thì là http://minio:9000
+MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY', "minioadmin")
+MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY', "minioadmin")
+BUCKET_NAME = os.getenv('MINIO_BUCKET_NAME', "stock-data")
+# Đường dẫn ảo S3 tới file Parquet
+S3_FILE_PATH = f"s3://{BUCKET_NAME}/raw_parquet/alphavantage_cash_flow.parquet"
+# Cấu hình "chìa khoá" để Pandas biết đường mở cửa MinIO
+STORAGE_OPTIONS = {
+    "key": MINIO_ACCESS_KEY,
+    "secret": MINIO_SECRET_KEY,
+    "client_kwargs": {"endpoint_url": MINIO_ENDPOINT}
+}
 
 def get_max_fiscal_date(symbol): 
     """
     Lấy ngày báo cáo gần nhất từ file Parquet
     """
-    if os.path.exists(FILE_PATH):
-        try: 
-            df = pd.read_parquet(FILE_PATH, columns=['symbol', 'fiscal_date_ending'])
-            df_symbol = df[df['symbol'] == symbol]
-            
-            if not df_symbol.empty: 
-                max_date = df_symbol['fiscal_date_ending'].max()
-                return pd.to_datetime(max_date)
-        except Exception as e: 
-            print(f'Lỗi khi đọc file Parquet để tìm max date cho {symbol}: {e}')
+    try: 
+        df = pd.read_parquet(S3_FILE_PATH, columns=['symbol', 'fiscal_date_ending'], storage_options=STORAGE_OPTIONS)
+        df_symbol = df[df['symbol'] == symbol]
+        
+        if not df_symbol.empty: 
+            max_date = df_symbol['fiscal_date_ending'].max()
+            return pd.to_datetime(max_date)
+    except Exception as e: 
+        print(f'Lỗi khi đọc file Parquet để tìm max date cho {symbol}: {e}')
     return None
 
 # Gọi API 
 def fetch_cashflow_from_api(symbol, api_key):
     url = f"https://www.alphavantage.co/query?function=CASH_FLOW&symbol={symbol}&apikey={api_key}"
     try: 
-        response = requests.get(url, timeout=5)
+        response = requests.get(url, timeout=15)     
         response.raise_for_status()
 
         try: 
@@ -112,11 +121,8 @@ def transform_cashflow_data(raw_data, symbol, report_type):
 
 # Lưu dữ liệu vào PARQUET
 def fetch_cashflow_data(mode='daily'):
-    load_dotenv(".env")
     api_key = os.getenv("ALPHAVANTAGE_API_KEY")
     start_date_historical = pd.to_datetime(os.getenv("START_DATE", "2015-01-01"))
-    
-    os.makedirs(PARQUET_DIR, exist_ok=True)
     stock_list_path = os.path.join(os.path.dirname(__file__), '..', 'stock_list.csv')
 
     try: 
@@ -161,18 +167,18 @@ def fetch_cashflow_data(mode='daily'):
     # Xử lý nghiền tất cả vào file Parquet
     if all_new_data:
         new_df = pd.concat(all_new_data, ignore_index=True)
-        
-        if mode == 'daily' and os.path.exists(FILE_PATH):
+        new_df['load_timestamp'] = pd.Timestamp.now()
+        try:
             print("Đang gộp báo cáo tài chính mới vào file Parquet cũ...")
-            old_df = pd.read_parquet(FILE_PATH)
+            old_df = pd.read_parquet(S3_FILE_PATH, storage_options=STORAGE_OPTIONS)
             final_df = pd.concat([old_df, new_df], ignore_index=True)
             # Khử trùng lặp trên bộ khoá (ngày báo cáo + mã + loại)
             final_df.drop_duplicates(subset=['symbol', 'fiscal_date_ending', 'report_type'], keep='last', inplace=True)
-        else:
+        except Exception: 
+            print("Không thấy file cũ trên MinIO. Tạo file Parquet mới tinh!")
             final_df = new_df
         
-        final_df['load_timestamp'] = pd.Timestamp.now()
-        final_df.to_parquet(FILE_PATH, index=False)
+        final_df.to_parquet(S3_FILE_PATH, index=False, storage_options=STORAGE_OPTIONS)
         print(f"Hoàn tất! Đã lưu tổng cộng {len(final_df)} báo cáo vào Data Lake (Parquet).")
     else:
         print("Không có dữ liệu Cashflow mới nào trên toàn thị trường cần tải.")

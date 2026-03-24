@@ -97,7 +97,7 @@ def fetch_yfinance_data(mode='daily'):
     # Ghi toàn bộ dữ liệu vào file parquet 
     if all_new_data: 
         new_df = pd.concat(all_new_data, ignore_index=True)
-        
+        new_df['load_timestamp'] = pd.Timestamp.now()
         try:
             print("Đang append dữ liệu vào file Parquet...")
             old_df = pd.read_parquet(S3_FILE_PATH, storage_options=STORAGE_OPTIONS)
@@ -109,7 +109,6 @@ def fetch_yfinance_data(mode='daily'):
             print("Không thấy file cũ trên MinIO. Tạo file Parquet mới tinh!")
             final_df = new_df 
         
-        final_df['load_timestamp'] = pd.Timestamp.now()
         final_df.to_parquet(S3_FILE_PATH, index=False, storage_options=STORAGE_OPTIONS)
         print(f"Đã ghi {len(final_df)} dòng dữ liệu vào file Parquet")
     else: 

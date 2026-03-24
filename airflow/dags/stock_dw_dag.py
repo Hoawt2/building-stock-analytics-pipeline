@@ -93,63 +93,43 @@ def finance_etl_pipeline():
 
 
 
-    with TaskGroup("group_staging", tooltip="Đẩy dữ liệu vào Staging") as group_staging:
-        load_to_staging = BashOperator(
-            task_id="mysql_to_postgres_staging",
-            bash_command=f"python {SCRIPT_PATH}/staging/mysql_to_postgres_staging.py --mode incremental",
+    with TaskGroup("group_load_raw", tooltip="Đẩy dữ liệu vào Raw Schema") as group_load_raw:
+        load_to_raw = BashOperator(
+            task_id="minio_to_postgres_raw",
+            bash_command=f"python {SCRIPT_PATH}/load/load_to_staging.py",
             trigger_rule=TriggerRule.NONE_FAILED_MIN_ONE_SUCCESS
         )
 
-
-    with TaskGroup("group_transform", tooltip="Transform sang DWH") as group_transform:
+    with TaskGroup("group_dbt_transform", tooltip="Transform sang DWH bằng dbt") as group_dbt_transform:
         
-        # Transform Dimensions
-        tf_dim_company = BashOperator(
-            task_id="transform_dim_company",
-            bash_command=f"python {SCRIPT_PATH}/transform/transform_dim_company_information.py"
+        dbt_staging = BashOperator(
+            task_id="dbt_run_staging",
+            bash_command="docker exec dbt_core dbt run --select staging"
         )
 
-        tf_fact_stock = BashOperator(
-            task_id="transform_fact_stock",
-            bash_command=f"python {SCRIPT_PATH}/transform/transform_fact_history_stock.py"
-        )
-
-        tf_fact_marketcap = BashOperator(
-            task_id="transform_fact_market_cap",
-            bash_command=f"python {SCRIPT_PATH}/transform/transform_fact_market_cap.py"
-        )
-
-        tf_fact_earnings = BashOperator(
-            task_id="transform_fact_earnings",
-            bash_command=f"python {SCRIPT_PATH}/transform/transform_fact_earnings.py"
+        dbt_snapshot = BashOperator(
+            task_id="dbt_snapshot_company",
+            bash_command="docker exec dbt_core dbt snapshot"
         )
         
-        tf_fact_cashflow = BashOperator(
-            task_id="transform_fact_cash_flow",
-            bash_command=f"python {SCRIPT_PATH}/transform/transform_fact_cash_flow.py"
+        dbt_core = BashOperator(
+            task_id="dbt_run_core",
+            bash_command="docker exec dbt_core dbt run --select core"
         )
         
-        tf_fact_balance = BashOperator(
-            task_id="transform_fact_balance_sheet",
-            bash_command=f"python {SCRIPT_PATH}/transform/transform_fact_balance_sheet.py"
+        dbt_marts = BashOperator(
+            task_id="dbt_run_marts",
+            bash_command="docker exec dbt_core dbt run --select marts"
         )
         
-        tf_fact_income = BashOperator(
-            task_id="transform_fact_income_statement",
-            bash_command=f"python {SCRIPT_PATH}/transform/transform_fact_income_statement.py"
+        dbt_test = BashOperator(
+            task_id="dbt_test_core",
+            bash_command="docker exec dbt_core dbt test -s core"
         )
 
-        # Định nghĩa thứ tự trong Group Transform (Dim trước Fact để đảm bảo Foreign Key)
-        tf_dim_company >> [
-            tf_fact_stock, 
-            tf_fact_marketcap, 
-            tf_fact_earnings, 
-            tf_fact_cashflow, 
-            tf_fact_balance, 
-            tf_fact_income
-        ]
+        dbt_staging >> dbt_snapshot >> dbt_core >> dbt_marts >> dbt_test
 
 
-    [group_fetch_daily, group_fetch_limited] >> group_staging >> group_transform
+    [group_fetch_daily, group_fetch_limited] >> group_load_raw >> group_dbt_transform
 
 finance_etl_pipeline()

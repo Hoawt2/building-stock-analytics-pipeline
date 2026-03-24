@@ -5,15 +5,26 @@ from dotenv import load_dotenv
 from time import sleep
 
 
-# CẤU HÌNH ĐƯỜNG DẪN PARQUET
-PARQUET_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'raw_parquet')
-FILE_PATH = os.path.join(PARQUET_DIR, "fmp_company_information.parquet")
+# Cấu hình kết nối MINIO 
+load_dotenv()
+MINIO_ENDPOINT = os.getenv('MINIO_ENDPOINT', "http://localhost:9000")  # Nếu chạy trong docker thì là http://minio:9000
+MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY', "minioadmin")
+MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY', "minioadmin")
+BUCKET_NAME = os.getenv('MINIO_BUCKET_NAME', "stock-data")
+# Đường dẫn ảo S3 tới file Parquet
+S3_FILE_PATH = f"s3://{BUCKET_NAME}/raw_parquet/fmp_company_information.parquet"
+# Cấu hình "chìa khoá" để Pandas biết đường mở cửa MinIO
+STORAGE_OPTIONS = {
+    "key": MINIO_ACCESS_KEY,
+    "secret": MINIO_SECRET_KEY,
+    "client_kwargs": {"endpoint_url": MINIO_ENDPOINT}
+}
 
-# GỌI API FMP (GIỮ NGUYÊN)
+# GỌI API FMP
 def fetch_company_info(symbol, api_key):
     url = f"https://financialmodelingprep.com/stable/profile?symbol={symbol}&apikey={api_key}"
     try: 
-        response = requests.get(url, timeout=5)
+        response = requests.get(url, timeout=15)
         response.raise_for_status()
         try: 
             data = response.json()
@@ -78,13 +89,10 @@ def transform_company_info(raw_data, symbol):
 
 # HÀM MAIN VÀ LƯU PARQUET
 def fetch_company_information():
-    load_dotenv('.env')
     api_key = os.getenv("FINANCIAL_MODELING_PREP_API_KEY")
     if not api_key:
         print("Cảnh báo: Không tìm thấy FINANCIAL_MODELING_PREP_API_KEY trong file .env")
         return
-    
-    os.makedirs(PARQUET_DIR, exist_ok=True)
     stock_list_path = os.path.join(os.path.dirname(__file__), '..', 'stock_list.csv')
     try: 
         tickers_df = pd.read_csv(stock_list_path)
@@ -107,25 +115,25 @@ def fetch_company_information():
             transformed_df = transform_company_info(raw_data, symbol)
             if not transformed_df.empty:
                 all_new_data.append(transformed_df)
-                print(f"[{symbol}] ✅ Xử lý thành công.")
+                print(f"[{symbol}] ✅ Xử lý thành công {len(transformed_df)} dòng.")
                 
         sleep(1) # Tránh spam API dồn dập
 
     if all_new_data:
         new_df = pd.concat(all_new_data, ignore_index=True)
-        
+        new_df['load_timestamp'] = pd.Timestamp.now()
         # MySQL cũ dùng on_duplicate_key_update (nghĩa là ghi đè nếu trùng symbol)
         # Parquet thì ta đọc lên, gộp lại, rồi drop_duplicates trên symbol và giữ bản ghi mới nhất (keep='last')
-        if os.path.exists(FILE_PATH):
+        try:
             print("Đang gộp dữ liệu cũ vào Parquet và Upsert (Ghi đè bản ghi mới)...")
-            old_df = pd.read_parquet(FILE_PATH)
+            old_df = pd.read_parquet(S3_FILE_PATH, storage_options=STORAGE_OPTIONS)
             final_df = pd.concat([old_df, new_df], ignore_index=True)
             final_df.drop_duplicates(subset=['symbol'], keep='last', inplace=True)
-        else:
+        except Exception: 
+            print("Không thấy file cũ trên MinIO. Tạo file Parquet mới tinh!")
             final_df = new_df
             
-        final_df['load_timestamp'] = pd.Timestamp.now()
-        final_df.to_parquet(FILE_PATH, index=False)
+        final_df.to_parquet(S3_FILE_PATH, index=False, storage_options=STORAGE_OPTIONS)
         print(f"✅ Hoàn tất! Đã lưu {len(final_df)} công ty vào Data Lake (Parquet).")
     else:
         print("Không có thông tin công ty nào được cập nhật.")
