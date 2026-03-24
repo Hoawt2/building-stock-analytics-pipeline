@@ -53,3 +53,4 @@ SELECT
     COALESCE(dbt_valid_to, '9999-12-31'::timestamp) AS valid_to,
     CASE WHEN dbt_valid_to IS NULL THEN TRUE ELSE FALSE END AS is_current
 FROM snapshot
+

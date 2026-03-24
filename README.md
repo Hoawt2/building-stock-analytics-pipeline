@@ -12,6 +12,7 @@ A production-grade **ELT data pipeline** that fetches stock market data from mul
 ---
 
 ## 🧩 System Architecture (Medallion Architecture)
+![Data Architecture Diagram](./docs/data_architecture.png)
 
 ```mermaid
 graph TD;
